@@ -1,0 +1,15 @@
+# This is an example variables file.
+# Copy this file to terraform.tfvars and fill in your actual values.
+# The terraform.tfvars file is gitignored and should not be committed.
+
+# --- Required Variables ---
+server_ip   = "YOUR_SERVER_IP_HERE"
+server_user = "YOUR_SSH_USER_HERE"
+server_port = "YOUR_SERVER_PORT_HERE"
+db_password = "YOUR_SECRET_DB_PASSWORD"
+
+# --- Optional Variables (Defaults are set in variables.tf) ---
+# db_user     = "skrepka"
+# db_name     = "skrepka_db"
+# db_port     = 5432
+# backend_port    = 4000
