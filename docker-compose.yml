@@ -1,6 +1,5 @@
 services:
   postgres:
-    container_name: skrepka-postgres
     image: postgres:16
     ports:
       - "${DB_PORT:-5432}:5432"
@@ -18,7 +17,6 @@ services:
     restart: unless-stopped
 
   backend:
-    container_name: skrepka-backend
     build: .
     ports:
       - "${APP_PORT:-4000}:4000"

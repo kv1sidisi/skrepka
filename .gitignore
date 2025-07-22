@@ -30,3 +30,14 @@ go.work.sum
 # Editor/IDE
 .idea/
 # .vscode/
+
+# Terraform-specific files
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfplan
+
+# Crash log files
+crash.log
+
