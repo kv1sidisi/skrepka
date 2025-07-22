@@ -14,7 +14,7 @@ provider "docker" {
 resource "docker_image" "skrepka_backend_image" {
   name = "skrepka-backend:latest"
   build {
-    context = "."
+    context = ".."
   }
 }
 
