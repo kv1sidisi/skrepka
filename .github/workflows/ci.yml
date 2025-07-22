@@ -22,6 +22,12 @@ jobs:
       - name: Test
         run: go test -v ./...
 
+      - name: Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.59
+          args: --timeout=5m
+
   lint-dockerfile:
     name: Lint Dockerfile
     runs-on: self-hosted
