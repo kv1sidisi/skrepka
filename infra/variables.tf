@@ -2,20 +2,20 @@
 # Server
 variable "server_ip" {
   type = string
-  default = "kvisidisi.ru"
   description = "Server IP-address"
+  # No default, this must be provided.
 }
 
 variable "server_user" {
   type = string
-  default = "kvisidisi"
   description = "SSH-connection user"
+  # No default, this must be provided.
 }
 
 variable "server_port" {
   type = number
-  default = 52
   description = "Server Port"
+  # No default, this must be provided.
 }
 
 
@@ -37,8 +37,9 @@ variable "db_user" {
 
 variable "db_password" {
   type = string
-  default = "skrepka_password"
   description = "Skrepka postgres database password"
+  sensitive   = true
+  # No default, this is a secret and must be provided.
 
 }
 
