@@ -9,6 +9,8 @@ import (
 	"os"
 )
 
+// health handles the health check endpoint.
+// It's used by external services to verify that the application is running.
 func health(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
