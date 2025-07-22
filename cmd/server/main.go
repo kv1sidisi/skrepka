@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log/slog"
 	"net/http"
 	"os"
@@ -37,6 +38,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", health)
+	mux.Handle("/metrics", promhttp.Handler())
 
 	slog.Info("starting server", "address", ":4000")
 
