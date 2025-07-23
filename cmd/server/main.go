@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/kv1sidisi/skrepka/internal/config"
 	"github.com/kv1sidisi/skrepka/internal/logger"
+	"github.com/kv1sidisi/skrepka/internal/service"
 	"github.com/kv1sidisi/skrepka/internal/storage"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log/slog"
@@ -56,6 +57,9 @@ func main() {
 		os.Exit(1)
 	}
 	defer postgres.Close()
+
+	//Authentication service
+	authService := service.NewAuthService(postgres, cfg.TokenTTL, cfg.JWTSecret, cfg.GoogleClientID)
 
 	//HTTP Server setup
 	mux := http.NewServeMux()
