@@ -40,22 +40,54 @@ func NewAuthService(storage UserResolver, log *slog.Logger, tokenTTL time.Durati
 }
 
 func (a *AuthService) AuthByGoogleToken(ctx context.Context, idToken string) (string, error) {
-	payload, err := idtoken.Validate(ctx, idToken, a.googleClientID)
+	const op = "AuthService.AuthByGoogleToken"
+	log := a.log.With(slog.String("op", op))
+
+	log.Info("attempting authentication")
+
+	payload, err := a.validateAndParseGoogleToken(ctx, idToken)
 	if err != nil {
-		return "", fmt.Errorf("failed to validate google id token: %w", err)
+		log.Error("token validation failed", "error", err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	// Safely extract mandatory claims
+	user, err := a.resolveUser(ctx, payload)
+	if err != nil {
+		log.Error("failed to resolve user", "error", err)
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+	log.Info("user resolved", slog.String("user_id", user.ID.String()))
+
+	signedToken, err := a.createJWT(user)
+	if err != nil {
+		log.Error("failed to create token", "error", err)
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("authentication successful")
+	return signedToken, nil
+}
+
+// Validates the Google-provided ID token and extracts its payload.
+func (a *AuthService) validateAndParseGoogleToken(ctx context.Context, idToken string) (*idtoken.Payload, error) {
+	payload, err := idtoken.Validate(ctx, idToken, a.googleClientID)
+	if err != nil {
+		return nil, fmt.Errorf("google token validation failed: %w", err)
+	}
+	return payload, nil
+}
+
+// Resolves a user against the database, creating a new user if one doesn't exist.
+func (a *AuthService) resolveUser(ctx context.Context, payload *idtoken.Payload) (*models.User, error) {
 	userEmail, ok := payload.Claims["email"].(string)
 	if !ok {
-		return "", fmt.Errorf("email claim is missing or not a string")
+		return nil, fmt.Errorf("email claim is missing or not a string")
 	}
 	providerID, ok := payload.Claims["sub"].(string)
 	if !ok {
-		return "", fmt.Errorf("sub claim (provider ID) is missing or not a string")
+		return nil, fmt.Errorf("sub claim (provider ID) is missing or not a string")
 	}
 
-	// Extract optional claims, defaulting to an empty string if they are missing
 	userName, _ := payload.Claims["name"].(string)
 	userAvatar, _ := payload.Claims["picture"].(string)
 
@@ -69,9 +101,13 @@ func (a *AuthService) AuthByGoogleToken(ctx context.Context, idToken string) (st
 
 	user, err := a.storage.ResolveUserByProvider(ctx, &userParams)
 	if err != nil {
-		return "", fmt.Errorf("failed to resolve user by google id token: %w", err)
+		return nil, fmt.Errorf("failed to resolve user by provider: %w", err)
 	}
+	return user, nil
+}
 
+// Creates and signs a new JWT for the given user.
+func (a *AuthService) createJWT(user *models.User) (string, error) {
 	claims := AuthClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(a.tokenTTl)),
