@@ -3,12 +3,26 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/kv1sidisi/skrepka/internal/models"
 	"github.com/kv1sidisi/skrepka/internal/storage"
 	"google.golang.org/api/idtoken"
 	"log/slog"
 	"time"
 )
+
+type AuthProvider string
+
+const (
+	AuthProviderGoogle AuthProvider = "google"
+	AuthProviderApple  AuthProvider = "apple"
+)
+
+type AuthClaims struct {
+	jwt.RegisteredClaims
+	UserID uuid.UUID `json:"user_id"`
+}
 
 type UserResolver interface {
 	ResolveUserByProvider(ctx context.Context, params *storage.ResolveUserParams) (*models.User, error)
@@ -53,7 +67,7 @@ func (a *AuthService) AuthByGoogleToken(ctx context.Context, idToken string) (st
 	userAvatar, _ := payload.Claims["picture"].(string)
 
 	userParams := storage.ResolveUserParams{
-		ProviderName: "google",
+		ProviderName: string(AuthProviderGoogle),
 		ProviderID:   providerID,
 		Email:        userEmail,
 		Name:         userName,
@@ -65,7 +79,17 @@ func (a *AuthService) AuthByGoogleToken(ctx context.Context, idToken string) (st
 		return "", fmt.Errorf("failed to resolve user by google id token: %w", err)
 	}
 
-	fmt.Println(user.ID)
+	claims := AuthClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(a.tokenTTl)),
+		},
+		UserID: user.ID,
+	}
 
-	return "placeholdr", nil
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signedToken, err := token.SignedString([]byte(a.jwtSecret))
+	if err != nil {
+		return "", fmt.Errorf("failed to sign token: %w", err)
+	}
+	return signedToken, nil
 }
