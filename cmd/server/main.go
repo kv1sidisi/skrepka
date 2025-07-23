@@ -50,11 +50,11 @@ func main() {
 	slog.SetDefault(log)
 
 	//Storage setup
-	dataStore, err := storage.NewStorage()
+	postgres, err := storage.NewStorage()
 	if err != nil {
 		slog.Error("failed to init storage", "error", err)
 	}
-	defer dataStore.Close()
+	defer postgres.Close()
 
 	//HTTP Server setup
 	mux := http.NewServeMux()
