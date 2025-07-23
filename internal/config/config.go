@@ -23,12 +23,12 @@ type HTTPServer struct {
 }
 
 type DB struct {
-	Host     string `yaml:"host" env:"DB_HOST" env-default:"localhost"`
-	Port     string `yaml:"port" env:"DB_PORT" env-default:"5432"`
-	User     string `yaml:"user" env:"DB_USER" env-default:"skrepka_user"`
-	Password string `yaml:"password" env:"DB_PASSWORD" env-required:"true"`
-	DBName   string `yaml:"dbname" env:"DB_NAME" env-default:"skrepka_db"`
-	SSLMode  string `yaml:"sslmode" env-default:"disable"`
+	DBHost     string `yaml:"host" env:"DB_HOST" env-default:"localhost"`
+	DBPort     string `yaml:"port" env:"DB_PORT" env-default:"5432"`
+	DBUser     string `yaml:"user" env:"DB_USER" env-default:"skrepka_user"`
+	DBPassword string `yaml:"password" env:"DB_PASSWORD" env-required:"true"`
+	DBName     string `yaml:"db_name" env:"DB_NAME" env-default:"skrepka_db"`
+	SSLMode    string `yaml:"sslmode" env-default:"disable"`
 }
 
 type Auth struct {

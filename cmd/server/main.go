@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/kv1sidisi/skrepka/internal/config"
 	"github.com/kv1sidisi/skrepka/internal/logger"
+	"github.com/kv1sidisi/skrepka/internal/storage"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log/slog"
 	"net/http"
@@ -37,19 +38,26 @@ func health(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(log)
-
 	cfg := config.MustLoad()
 
+	//Logger setup
 	writer, err := logger.SetupWriter(cfg.LogPath)
 	if err != nil {
 		slog.Error("failed to setup log writer", "error", err)
 		os.Exit(1)
 	}
-	log = logger.SetupLogger(cfg.Env, writer)
+	log := logger.SetupLogger(cfg.Env, writer)
 	slog.SetDefault(log)
 
+	//Storage setup
+	postgres, err := storage.NewStorage()
+	if err != nil {
+		slog.Error("failed to init storage", "error", err)
+		os.Exit(1)
+	}
+	defer postgres.Close()
+
+	//HTTP Server setup
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", health)
 	mux.Handle("/metrics", promhttp.Handler())
