@@ -69,10 +69,10 @@ func TestMustLoad(t *testing.T) {
 				require.NotNil(t, cfg)
 				require.Equal(t, "prod", cfg.Env)
 				require.Equal(t, "/tmp/log.log", cfg.LogPath)
-				require.Equal(t, "localhost:8080", cfg.HTTPServer.Address)
-				require.Equal(t, "5432", cfg.DB.Port)          // Checks default value.
-				require.Equal(t, "test_pass", cfg.DB.Password) // Checks required env var.
-				require.Equal(t, 30*time.Minute, cfg.Auth.TokenTTL)
+				require.Equal(t, "localhost:8080", cfg.Address)
+				require.Equal(t, "5432", cfg.Port)          // Checks default value.
+				require.Equal(t, "test_pass", cfg.Password) // Checks required env var.
+				require.Equal(t, 30*time.Minute, cfg.TokenTTL)
 			},
 		},
 		// Test case 2: Verifies that the program terminates if CONFIG_PATH is not set.
