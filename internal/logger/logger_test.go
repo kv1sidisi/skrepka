@@ -2,6 +2,7 @@ package logger
 
 import (
 	"bytes"
+	"context"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -44,8 +45,8 @@ func TestSetupLogger(t *testing.T) {
 
 			logger := SetupLogger(tc.env, &buf)
 
-			require.True(t, logger.Enabled(nil, tc.expectedLevel))
-			require.False(t, logger.Enabled(nil, tc.expectedLevel-1))
+			require.True(t, logger.Enabled(context.TODO(), tc.expectedLevel))
+			require.False(t, logger.Enabled(context.TODO(), tc.expectedLevel-1))
 
 			if tc.expectedLevel == slog.LevelDebug {
 				logger.Debug("test debug message")
