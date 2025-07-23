@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"github.com/kv1sidisi/skrepka/internal/config"
 	"github.com/kv1sidisi/skrepka/internal/handler"
 	"github.com/kv1sidisi/skrepka/internal/logger"
