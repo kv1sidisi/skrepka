@@ -6,6 +6,7 @@ import (
 	"github.com/kv1sidisi/skrepka/internal/models"
 	"github.com/kv1sidisi/skrepka/internal/storage"
 	"google.golang.org/api/idtoken"
+	"log/slog"
 	"time"
 )
 
@@ -15,14 +16,16 @@ type UserResolver interface {
 
 type AuthService struct {
 	storage        UserResolver
+	log            *slog.Logger
 	tokenTTl       time.Duration
 	jwtSecret      string
 	googleClientID string
 }
 
-func NewAuthService(storage UserResolver, tokenTTL time.Duration, jwtSecret string, googleClientID string) *AuthService {
+func NewAuthService(storage UserResolver, log *slog.Logger, tokenTTL time.Duration, jwtSecret string, googleClientID string) *AuthService {
 	return &AuthService{
 		storage:        storage,
+		log:            log,
 		tokenTTl:       tokenTTL,
 		jwtSecret:      jwtSecret,
 		googleClientID: googleClientID,

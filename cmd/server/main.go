@@ -48,7 +48,6 @@ func main() {
 		os.Exit(1)
 	}
 	log := logger.SetupLogger(cfg.Env, writer)
-	slog.SetDefault(log)
 
 	//Storage setup
 	postgres, err := storage.NewStorage()
