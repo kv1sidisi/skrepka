@@ -55,7 +55,7 @@ func (s *Storage) Close() {
 
 // ResolveUserParams defines the input parameters for resolving a user.
 type ResolveUserParams struct {
-	ProviderName string
+	ProviderName models.Provider
 	ProviderID   string
 	Email        string
 	Name         string

@@ -12,13 +12,6 @@ import (
 	"time"
 )
 
-type AuthProvider string
-
-const (
-	AuthProviderGoogle AuthProvider = "google"
-	AuthProviderApple  AuthProvider = "apple"
-)
-
 type AuthClaims struct {
 	jwt.RegisteredClaims
 	UserID uuid.UUID `json:"user_id"`
@@ -67,7 +60,7 @@ func (a *AuthService) AuthByGoogleToken(ctx context.Context, idToken string) (st
 	userAvatar, _ := payload.Claims["picture"].(string)
 
 	userParams := storage.ResolveUserParams{
-		ProviderName: string(AuthProviderGoogle),
+		ProviderName: models.ProviderGoogle,
 		ProviderID:   providerID,
 		Email:        userEmail,
 		Name:         userName,
