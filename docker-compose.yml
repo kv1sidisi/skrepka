@@ -20,6 +20,8 @@ services:
     build: .
     ports:
       - "${APP_PORT:-4000}:4000"
+    volumes:
+      - ./configs:/app/configs
     env_file:
       - .env
     environment:
