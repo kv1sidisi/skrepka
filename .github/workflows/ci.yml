@@ -23,9 +23,9 @@ jobs:
         run: go test -v ./...
 
       - name: Lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: v1.59
+          # Not specifying a version will use the latest compatible version.
           args: --timeout=5m
 
   lint-dockerfile:

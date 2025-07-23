@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/kv1sidisi/skrepka/internal/config"
+	"github.com/kv1sidisi/skrepka/internal/logger"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log/slog"
 	"net/http"
@@ -35,16 +37,34 @@ func health(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
+	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(log)
+
+	cfg := config.MustLoad()
+
+	writer, err := logger.SetupWriter(cfg.LogPath)
+	if err != nil {
+		slog.Error("failed to setup log writer", "error", err)
+		os.Exit(1)
+	}
+	log = logger.SetupLogger(cfg.Env, writer)
+	slog.SetDefault(log)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", health)
 	mux.Handle("/metrics", promhttp.Handler())
 
-	slog.Info("starting server", "address", ":4000")
+	slog.Info("starting server", "address", cfg.Address)
 
-	if err := http.ListenAndServe(":4000", mux); err != nil {
+	server := &http.Server{
+		Addr:         cfg.Address,
+		Handler:      mux,
+		ReadTimeout:  cfg.Timeout,
+		WriteTimeout: cfg.Timeout,
+		IdleTimeout:  cfg.IdleTimeout,
+	}
+
+	if err := server.ListenAndServe(); err != nil {
 		slog.Error("server failed to start", "error", err)
 		os.Exit(1)
 	}
