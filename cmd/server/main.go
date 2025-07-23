@@ -42,7 +42,8 @@ func main() {
 
 	cfg := config.MustLoad()
 
-	log = logger.SetupLogger(cfg.Env, cfg.LogPath)
+	writer := logger.SetupWriter(cfg.LogPath)
+	log = logger.SetupLogger(cfg.Env, writer)
 	slog.SetDefault(log)
 
 	mux := http.NewServeMux()

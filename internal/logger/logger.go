@@ -9,9 +9,26 @@ import (
 
 // SetupLogger used to set up logger based on env level.
 // returns slog.Logger on success
-func SetupLogger(env, logPath string) *slog.Logger {
+func SetupLogger(env string, writer io.Writer) *slog.Logger {
 	var logger *slog.Logger
 
+	switch env {
+	case "dev":
+		logger = slog.New(slog.NewJSONHandler(writer, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	case "local":
+		logger = slog.New(slog.NewTextHandler(writer, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	case "prod":
+		logger = slog.New(slog.NewJSONHandler(writer, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	default:
+		logger = slog.New(slog.NewJSONHandler(writer, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	}
+	return logger
+}
+
+func SetupWriter(logPath string) io.Writer {
+	if logPath == "" {
+		return os.Stdout
+	}
 	logDir := filepath.Dir(logPath)
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		slog.Error("failed to create log directory", "error", err)
@@ -22,17 +39,5 @@ func SetupLogger(env, logPath string) *slog.Logger {
 		slog.Error("failed to open log file", "error", err)
 	}
 
-	multiWriter := io.MultiWriter(os.Stdout, logFile)
-
-	switch env {
-	case "debug":
-		logger = slog.New(slog.NewJSONHandler(multiWriter, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	case "local":
-		logger = slog.New(slog.NewTextHandler(multiWriter, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	case "prod":
-		logger = slog.New(slog.NewJSONHandler(multiWriter, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	default:
-		logger = slog.New(slog.NewJSONHandler(multiWriter, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	}
-	return logger
+	return io.MultiWriter(os.Stdout, logFile)
 }
