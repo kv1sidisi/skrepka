@@ -61,7 +61,10 @@ func TestSetupLogger(t *testing.T) {
 
 func TestSetupWriter(t *testing.T) {
 	t.Run("should return os.Stdout when logPath is empty", func(t *testing.T) {
-		writer := SetupWriter("")
+		writer, err := SetupWriter("")
+		if err != nil {
+			t.Fatalf("Error was not expected: %v", err)
+		}
 		require.Equal(t, os.Stdout, writer)
 	})
 
@@ -69,12 +72,15 @@ func TestSetupWriter(t *testing.T) {
 		tempDir := t.TempDir()
 		logPath := filepath.Join(tempDir, "test.log")
 
-		writer := SetupWriter(logPath)
+		writer, err := SetupWriter(logPath)
+		if err != nil {
+			t.Fatalf("Error was not expected: %v", err)
+		}
 
 		require.NotNil(t, writer)
 		require.NotEqual(t, os.Stdout, writer)
 
-		_, err := os.Stat(logPath)
+		_, err = os.Stat(logPath)
 		require.NoError(t, err, "log file should have been created")
 	})
 }
