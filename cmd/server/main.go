@@ -37,9 +37,6 @@ func health(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(log)
-
 	cfg := config.MustLoad()
 
 	writer, err := logger.SetupWriter(cfg.LogPath)
@@ -47,7 +44,7 @@ func main() {
 		slog.Error("failed to setup log writer", "error", err)
 		os.Exit(1)
 	}
-	log = logger.SetupLogger(cfg.Env, writer)
+	log := logger.SetupLogger(cfg.Env, writer)
 	slog.SetDefault(log)
 
 	mux := http.NewServeMux()
