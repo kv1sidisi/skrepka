@@ -3,6 +3,8 @@ package logger
 import (
 	"bytes"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -55,4 +57,24 @@ func TestSetupLogger(t *testing.T) {
 			require.True(t, strings.Contains(output, tc.mustContain), "log output '%s' does not contain expected string '%s'", output, tc.mustContain)
 		})
 	}
+}
+
+func TestSetupWriter(t *testing.T) {
+	t.Run("should return os.Stdout when logPath is empty", func(t *testing.T) {
+		writer := SetupWriter("")
+		require.Equal(t, os.Stdout, writer)
+	})
+
+	t.Run("should create file and return MultiWriter when logPath is provided", func(t *testing.T) {
+		tempDir := t.TempDir()
+		logPath := filepath.Join(tempDir, "test.log")
+
+		writer := SetupWriter(logPath)
+
+		require.NotNil(t, writer)
+		require.NotEqual(t, os.Stdout, writer)
+
+		_, err := os.Stat(logPath)
+		require.NoError(t, err, "log file should have been created")
+	})
 }
