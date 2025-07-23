@@ -42,7 +42,11 @@ func main() {
 
 	cfg := config.MustLoad()
 
-	writer := logger.SetupWriter(cfg.LogPath)
+	writer, err := logger.SetupWriter(cfg.LogPath)
+	if err != nil {
+		slog.Error("failed to setup log writer", "error", err)
+		os.Exit(1)
+	}
 	log = logger.SetupLogger(cfg.Env, writer)
 	slog.SetDefault(log)
 

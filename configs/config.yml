@@ -1,4 +1,4 @@
-env: "local"
+env: "dev"
 log_path: "./logs/skrepka.logs"
 
 http_server:
