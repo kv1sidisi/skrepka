@@ -50,9 +50,17 @@ func main() {
 	mux.HandleFunc("/health", health)
 	mux.Handle("/metrics", promhttp.Handler())
 
-	slog.Info("starting server", "address", ":4000")
+	slog.Info("starting server", "address", cfg.Address)
 
-	if err := http.ListenAndServe(":4000", mux); err != nil {
+	server := &http.Server{
+		Addr:         cfg.Address,
+		Handler:      mux,
+		ReadTimeout:  cfg.Timeout,
+		WriteTimeout: cfg.Timeout,
+		IdleTimeout:  cfg.IdleTimeout,
+	}
+
+	if err := server.ListenAndServe(); err != nil {
 		slog.Error("server failed to start", "error", err)
 		os.Exit(1)
 	}
