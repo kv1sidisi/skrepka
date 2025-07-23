@@ -32,7 +32,7 @@ func main() {
 	defer postgres.Close()
 
 	//Authentication service
-	_ := service.NewAuthService(postgres, log, cfg.TokenTTL, cfg.JWTSecret, cfg.GoogleClientID)
+	_ = service.NewAuthService(postgres, log, cfg.TokenTTL, cfg.JWTSecret, cfg.GoogleClientID)
 
 	// Handlers setup
 	healthHandler := handler.NewHealthHandler(log)
