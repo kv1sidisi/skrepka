@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestStorage_FindOrCreateUserByProvider(t *testing.T) {
+func TestStorage_ResolveUserByProvider(t *testing.T) {
 	mockUserID := uuid.New()
 	mockTime := time.Now().UTC().Truncate(time.Millisecond)
 
@@ -26,7 +26,7 @@ func TestStorage_FindOrCreateUserByProvider(t *testing.T) {
 	}
 
 	inputParams := &ResolveUserParams{
-		ProviderName: "google",
+		ProviderName: models.ProviderGoogle, // Corrected type
 		ProviderID:   "12345",
 		Email:        "test@example.com",
 		Name:         "Test User",
@@ -43,9 +43,9 @@ func TestStorage_FindOrCreateUserByProvider(t *testing.T) {
 			name: "user and auth provider exist",
 			mockSetup: func(mock pgxmock.PgxPoolIface) {
 				authProviderRows := pgxmock.NewRows([]string{"id", "user_id", "provider_name", "provider_id"}).
-					AddRow(uuid.New(), mockUserID, "google", "12345")
+					AddRow(uuid.New(), mockUserID, models.ProviderGoogle, "12345")
 				mock.ExpectQuery(`SELECT id, user_id, provider_name, provider_id FROM auth_providers WHERE provider_name = \$1 AND provider_id = \$2`).
-					WithArgs("google", "12345").
+					WithArgs(models.ProviderGoogle, "12345"). // Corrected type
 					WillReturnRows(authProviderRows)
 
 				userRows := pgxmock.NewRows([]string{"id", "email", "name", "avatar_url", "created_at", "updated_at"}).
@@ -61,7 +61,7 @@ func TestStorage_FindOrCreateUserByProvider(t *testing.T) {
 			name: "user exists, but auth provider is new",
 			mockSetup: func(mock pgxmock.PgxPoolIface) {
 				mock.ExpectQuery(`SELECT (.+) FROM auth_providers`).
-					WithArgs("google", "12345").
+					WithArgs(models.ProviderGoogle, "12345"). // Corrected type
 					WillReturnError(pgx.ErrNoRows)
 
 				userRows := pgxmock.NewRows([]string{"id", "email", "name", "avatar_url", "created_at", "updated_at"}).
@@ -71,7 +71,7 @@ func TestStorage_FindOrCreateUserByProvider(t *testing.T) {
 					WillReturnRows(userRows)
 
 				mock.ExpectExec(`INSERT INTO auth_providers`).
-					WithArgs(expectedUser.ID, "google", "12345").
+					WithArgs(expectedUser.ID, models.ProviderGoogle, "12345"). // Corrected type
 					WillReturnResult(pgxmock.NewResult("INSERT", 1))
 			},
 			expectedUser:  expectedUser,
@@ -81,7 +81,7 @@ func TestStorage_FindOrCreateUserByProvider(t *testing.T) {
 			name: "new user and new auth provider",
 			mockSetup: func(mock pgxmock.PgxPoolIface) {
 				mock.ExpectQuery(`SELECT (.+) FROM auth_providers`).
-					WithArgs("google", "12345").
+					WithArgs(models.ProviderGoogle, "12345"). // Corrected type
 					WillReturnError(pgx.ErrNoRows)
 
 				mock.ExpectQuery(`SELECT (.+) FROM users WHERE email = \$1`).
@@ -95,7 +95,7 @@ func TestStorage_FindOrCreateUserByProvider(t *testing.T) {
 					WillReturnRows(userInsertRows)
 
 				mock.ExpectExec(`INSERT INTO auth_providers`).
-					WithArgs(expectedUser.ID, "google", "12345").
+					WithArgs(expectedUser.ID, models.ProviderGoogle, "12345"). // Corrected type
 					WillReturnResult(pgxmock.NewResult("INSERT", 1))
 			},
 			expectedUser:  expectedUser,
