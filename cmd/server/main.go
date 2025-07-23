@@ -53,6 +53,7 @@ func main() {
 	postgres, err := storage.NewStorage()
 	if err != nil {
 		slog.Error("failed to init storage", "error", err)
+		os.Exit(1)
 	}
 	defer postgres.Close()
 
