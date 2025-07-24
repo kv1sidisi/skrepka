@@ -45,22 +45,18 @@ func NewAuthService(storage UserResolver, log *slog.Logger, tokenTTL time.Durati
 // and issues a new internal JWT.
 func (a *Service) Authenticate(ctx context.Context, provider models.Provider, token string) (string, error) {
 	const op = "AuthService.Authenticate"
-	log := a.log.With(slog.String("op", op))
-
-	log.Info("attempting authentication", slog.String("method", provider.String()))
 
 	authenticator, ok := a.providers[provider]
 	if !ok {
-		log.Error("authenticator is not supported", slog.String("provider", provider.String()))
+		// This is a server configuration error, so it's appropriate to log it here.
+		a.log.Error("unsupported provider requested", slog.String("provider", provider.String()))
+		return "", fmt.Errorf("%s: unsupported provider", op)
 	}
 
 	claims, err := authenticator.Validate(ctx, token)
 	if err != nil {
-		log.Error("token validation failed", "error", err)
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
-
-	log.Info("token validated successfully")
 
 	params := &storage.ResolveUserParams{
 		ProviderName: provider,
@@ -70,21 +66,12 @@ func (a *Service) Authenticate(ctx context.Context, provider models.Provider, to
 		AvatarURL:    claims.AvatarURL,
 	}
 
-		user, err := a.userResolver.ResolveUserByProvider(ctx, params)
+	user, err := a.userResolver.ResolveUserByProvider(ctx, params)
 	if err != nil {
-		log.Error("failed to resolve user", "error", err)
-		return "", fmt.Errorf("%s: %w", op, err)
-	}
-	log.Info("user resolved", slog.String("user_id", user.ID.String()))
-
-	signedToken, err := a.createJWT(user)
-	if err != nil {
-		log.Error("failed to create token", "error", err)
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	log.Info("authentication successful")
-	return signedToken, nil
+	return a.createJWT(user)
 }
 
 // Creates and signs a new JWT for the given user.

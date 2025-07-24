@@ -11,10 +11,26 @@ provider "docker" {
   host = "ssh://${var.server_user}@${var.server_ip}:${var.server_port}"
 }
 
+locals {
+  source_files = setunion(
+    fileset("${path.module}/..", "**/*.go"),
+    fileset("${path.module}/..", "go.mod"),
+    fileset("${path.module}/..", "go.sum")
+  )
+
+  source_hash = jsonencode([
+    for f in local.source_files : filesha256("${path.module}/../${f}")
+  ])
+}
+
 resource "docker_image" "skrepka_backend_image" {
   name = "skrepka-backend:latest"
   build {
     context = ".."
+  }
+
+  triggers = {
+    source_code_hash = local.source_hash
   }
 }
 

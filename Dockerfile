@@ -4,7 +4,8 @@ WORKDIR /app
 
 COPY go.mod go.sum ./
 
-RUN go mod download
+#RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
 COPY . .
 
@@ -18,6 +19,8 @@ WORKDIR /app
 RUN mkdir configs
 
 COPY --from=builder /app/skrepka-backend /app/skrepka-backend
+
+COPY --from=builder /app/migrations /app/migrations
 
 COPY --from=builder /app/configs/config.yml /app/configs/config.yml
 

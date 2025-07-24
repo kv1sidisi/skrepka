@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -29,11 +30,11 @@ func (r *UserRepository) ResolveUserByProvider(ctx context.Context, params *Reso
 		&authProvider.ProviderID,
 	)
 
-	switch err {
-	case nil:
+	switch {
+	case err == nil:
 		// Case 1: Auth provider found. Fetch the associated user and return.
 		return r.findUserByID(ctx, authProvider.UserID)
-	case pgx.ErrNoRows:
+	case errors.Is(err, pgx.ErrNoRows):
 		// Case 2 & 3: Auth provider not found. Proceed to check by email.
 	default:
 		// An unexpected database error occurred.
@@ -42,15 +43,15 @@ func (r *UserRepository) ResolveUserByProvider(ctx context.Context, params *Reso
 
 	// Step 2: Attempt to find the user by email.
 	user, err := r.findUserByEmail(ctx, params.Email)
-	switch err {
-	case nil:
+	switch {
+	case err == nil:
 		// Case 2: User found. Create the new auth provider for this existing user.
 		err = r.createAuthProvider(ctx, user.ID, params)
 		if err != nil {
 			return nil, err
 		}
 		return user, nil
-	case pgx.ErrNoRows:
+	case errors.Is(err, pgx.ErrNoRows):
 		// Case 3: User not found by email either. Proceed to create a new user.
 	default:
 		// An unexpected database error occurred.

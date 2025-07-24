@@ -49,7 +49,7 @@ func (h *OIDCHandler) HandleOIDCAuthenticate(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	log.Info("authentication attempt", slog.String("provider", req.Provider.String()))
+	log.Info("authentication requested", slog.String("provider", req.Provider.String()))
 
 	jwt, err := h.service.Authenticate(r.Context(), req.Provider, req.IDToken)
 	if err != nil {

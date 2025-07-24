@@ -2,10 +2,15 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
 
+	"fmt"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/kv1sidisi/skrepka/internal/config"
 	"github.com/kv1sidisi/skrepka/internal/handler"
 	"github.com/kv1sidisi/skrepka/internal/logger"
@@ -25,6 +30,26 @@ func main() {
 		os.Exit(1)
 	}
 	log := logger.SetupLogger(cfg.Env, writer)
+
+	log.Info("app version: 0.0.1")
+
+	// Migrations setup
+	log.Info("starting migrations")
+	migrationDSN := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
+	m, err := migrate.New(
+		"file://migrations",
+		migrationDSN,
+	)
+	if err != nil {
+		log.Error("cannot create new migrate instance", "error", err)
+		os.Exit(1)
+	}
+
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		log.Error("failed to apply migrations", "error", err)
+		os.Exit(1)
+	}
+	log.Info("migrations applied successfully")
 
 	// Storage setup
 	db, err := storage.New(ctx, cfg)
