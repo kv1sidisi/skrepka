@@ -14,7 +14,12 @@ FROM alpine:3.22.1
 
 RUN apk add --no-cache curl=8.14.1-r1
 
+WORKDIR /app
+RUN mkdir configs
+
 COPY --from=builder /app/skrepka-backend /app/skrepka-backend
+
+COPY --from=builder /app/configs/config.yml /app/configs/config.yml
 
 EXPOSE 4000
 

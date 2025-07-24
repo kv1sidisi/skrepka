@@ -61,8 +61,16 @@ resource "docker_container" "skrepka_backend" {
   }
 
   env = [
-    "DB_SOURCE=postgresql://${var.db_user}:${var.db_password}@${docker_container.postgres.name}:${var.db_port}/${var.db_name}?sslmode=disable"
+    "CONFIG_PATH=/app/configs/config.yml",
+    "DB_HOST=${docker_container.postgres.name}",
+    "DB_PORT=5432",
+    "DB_USER=${var.db_user}",
+    "DB_PASSWORD=${var.db_password}",
+    "DB_NAME=${var.db_name}",
+    "JWT_SECRET=${var.jwt_secret}",
+    "GOOGLE_CLIENT_ID=${var.google_client_id}"
   ]
+
 
   depends_on = [docker_container.postgres]
 }
