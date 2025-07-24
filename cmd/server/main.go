@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/kv1sidisi/skrepka/internal/config"
-	"github.com/kv1sidisi/skrepka/internal/handler/health"
+	"github.com/kv1sidisi/skrepka/internal/handler"
 	"github.com/kv1sidisi/skrepka/internal/logger"
-	"github.com/kv1sidisi/skrepka/internal/service"
+	"github.com/kv1sidisi/skrepka/internal/service/auth"
 	"github.com/kv1sidisi/skrepka/internal/storage"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log/slog"
@@ -32,15 +32,16 @@ func main() {
 	defer postgres.Close()
 
 	//Authentication service
-	_ = service.NewAuthService(postgres, log, cfg.TokenTTL, cfg.JWTSecret)
+	_ = auth.NewAuthService(postgres, log, cfg.TokenTTL, cfg.JWTSecret)
 
 	// Handlers setup
-	healthHandler := handler.NewHealthHandler(log)
+	healthHandler := handler.handler.NewHealthHandler(log)
 
 	//HTTP Server setup
 	mux := http.NewServeMux()
-	mux.Handle("/health", healthHandler)
-	mux.Handle("/metrics", promhttp.Handler())
+	mux.Handle("/api/v1/health", healthHandler)
+	mux.Handle("/api/v1/metrics", promhttp.Handler())
+	mux.Handle("/api/v1/oids")
 
 	log.Info("starting server", "address", cfg.Address)
 

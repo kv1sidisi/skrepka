@@ -23,7 +23,7 @@ func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log := h.log.With(slog.String("op", op))
 
 	if r.Method != http.MethodGet {
-		log.Warn("method not allowed", slog.String("method", r.Method))
+		log.Error("method not allowed", slog.String("method", r.Method))
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return

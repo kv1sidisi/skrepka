@@ -1,4 +1,4 @@
-package service
+package auth
 
 import (
 	"context"
@@ -29,7 +29,7 @@ func init() {
 func (g *GoogleAuthenticator) Validate(ctx context.Context, token string) (*ProviderClaims, error) {
 	payload, err := idtoken.Validate(ctx, token, g.googleClientID)
 	if err != nil {
-		return nil, fmt.Errorf("google token validation failed: %w", err)
+		return nil, fmt.Errorf("%w: %w", models.ErrProvider, err)
 	}
 
 	userEmail, ok := payload.Claims["email"].(string)

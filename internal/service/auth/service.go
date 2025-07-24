@@ -1,4 +1,4 @@
-package service
+package auth
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-type AuthClaims struct {
+type Claims struct {
 	jwt.RegisteredClaims
 	UserID uuid.UUID `json:"user_id"`
 }
@@ -22,7 +22,7 @@ type UserResolver interface {
 	ResolveUserByProvider(ctx context.Context, params *storage.ResolveUserParams) (*models.User, error)
 }
 
-type AuthService struct {
+type Service struct {
 	userResolver UserResolver
 	log          *slog.Logger
 	tokenTTl     time.Duration
@@ -30,8 +30,8 @@ type AuthService struct {
 	providers    map[models.Provider]ProviderAuthenticator
 }
 
-func NewAuthService(storage UserResolver, log *slog.Logger, tokenTTL time.Duration, jwtSecret string) *AuthService {
-	return &AuthService{
+func NewAuthService(storage UserResolver, log *slog.Logger, tokenTTL time.Duration, jwtSecret string) *Service {
+	return &Service{
 		userResolver: storage,
 		log:          log,
 		tokenTTl:     tokenTTL,
@@ -43,7 +43,7 @@ func NewAuthService(storage UserResolver, log *slog.Logger, tokenTTL time.Durati
 // Authenticate orchestrates the entire authentication flow for a given provider.
 // It selects the appropriate strategy, validates the external token, resolves the user,
 // and issues a new internal JWT.
-func (a *AuthService) Authenticate(ctx context.Context, provider models.Provider, token string) (string, error) {
+func (a *Service) Authenticate(ctx context.Context, provider models.Provider, token string) (string, error) {
 	const op = "AuthService.Authenticate"
 	log := a.log.With(slog.String("op", op))
 
@@ -88,8 +88,8 @@ func (a *AuthService) Authenticate(ctx context.Context, provider models.Provider
 }
 
 // Creates and signs a new JWT for the given user.
-func (a *AuthService) createJWT(user *models.User) (string, error) {
-	claims := AuthClaims{
+func (a *Service) createJWT(user *models.User) (string, error) {
+	claims := Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(a.tokenTTl)),
 		},
