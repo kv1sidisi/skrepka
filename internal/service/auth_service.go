@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kv1sidisi/skrepka/internal/models"
 	"github.com/kv1sidisi/skrepka/internal/storage"
-	"google.golang.org/api/idtoken"
 	"log/slog"
 	"time"
 )
@@ -17,41 +16,61 @@ type AuthClaims struct {
 	UserID uuid.UUID `json:"user_id"`
 }
 
+// UserResolver defines the dependency for resolving a user in the storage layer.
+// This interface allows for easier testing and decoupling from the concrete storage implementation.
 type UserResolver interface {
 	ResolveUserByProvider(ctx context.Context, params *storage.ResolveUserParams) (*models.User, error)
 }
 
 type AuthService struct {
-	storage        UserResolver
-	log            *slog.Logger
-	tokenTTl       time.Duration
-	jwtSecret      string
-	googleClientID string
+	userResolver UserResolver
+	log          *slog.Logger
+	tokenTTl     time.Duration
+	jwtSecret    string
+	providers    map[models.Provider]ProviderAuthenticator
 }
 
-func NewAuthService(storage UserResolver, log *slog.Logger, tokenTTL time.Duration, jwtSecret string, googleClientID string) *AuthService {
+func NewAuthService(storage UserResolver, log *slog.Logger, tokenTTL time.Duration, jwtSecret string) *AuthService {
 	return &AuthService{
-		storage:        storage,
-		log:            log,
-		tokenTTl:       tokenTTL,
-		jwtSecret:      jwtSecret,
-		googleClientID: googleClientID,
+		userResolver: storage,
+		log:          log,
+		tokenTTl:     tokenTTL,
+		jwtSecret:    jwtSecret,
+		providers:    providerRegistry,
 	}
 }
 
-func (a *AuthService) AuthByGoogleToken(ctx context.Context, idToken string) (string, error) {
-	const op = "AuthService.AuthByGoogleToken"
+// Authenticate orchestrates the entire authentication flow for a given provider.
+// It selects the appropriate strategy, validates the external token, resolves the user,
+// and issues a new internal JWT.
+func (a *AuthService) Authenticate(ctx context.Context, provider models.Provider, token string) (string, error) {
+	const op = "AuthService.Authenticate"
 	log := a.log.With(slog.String("op", op))
 
-	log.Info("attempting authentication")
+	log.Info("attempting authentication", slog.String("method", provider.String()))
 
-	payload, err := a.validateAndParseGoogleToken(ctx, idToken)
+	authenticator, ok := a.providers[provider]
+	if !ok {
+		log.Error("authenticator is not supported", slog.String("provider", provider.String()))
+	}
+
+	claims, err := authenticator.Validate(ctx, token)
 	if err != nil {
 		log.Error("token validation failed", "error", err)
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	user, err := a.resolveUser(ctx, payload)
+	log.Info("token validated successfully")
+
+	params := &storage.ResolveUserParams{
+		ProviderName: provider,
+		ProviderID:   claims.ProviderUserID,
+		Email:        claims.Email,
+		Name:         claims.Name,
+		AvatarURL:    claims.AvatarURL,
+	}
+
+	user, err := a.userResolver.ResolveUserByProvider(ctx, params)
 	if err != nil {
 		log.Error("failed to resolve user", "error", err)
 		return "", fmt.Errorf("%s: %w", op, err)
@@ -66,44 +85,6 @@ func (a *AuthService) AuthByGoogleToken(ctx context.Context, idToken string) (st
 
 	log.Info("authentication successful")
 	return signedToken, nil
-}
-
-// Validates the Google-provided ID token and extracts its payload.
-func (a *AuthService) validateAndParseGoogleToken(ctx context.Context, idToken string) (*idtoken.Payload, error) {
-	payload, err := idtoken.Validate(ctx, idToken, a.googleClientID)
-	if err != nil {
-		return nil, fmt.Errorf("google token validation failed: %w", err)
-	}
-	return payload, nil
-}
-
-// Resolves a user against the database, creating a new user if one doesn't exist.
-func (a *AuthService) resolveUser(ctx context.Context, payload *idtoken.Payload) (*models.User, error) {
-	userEmail, ok := payload.Claims["email"].(string)
-	if !ok {
-		return nil, fmt.Errorf("email claim is missing or not a string")
-	}
-	providerID, ok := payload.Claims["sub"].(string)
-	if !ok {
-		return nil, fmt.Errorf("sub claim (provider ID) is missing or not a string")
-	}
-
-	userName, _ := payload.Claims["name"].(string)
-	userAvatar, _ := payload.Claims["picture"].(string)
-
-	userParams := storage.ResolveUserParams{
-		ProviderName: models.ProviderGoogle,
-		ProviderID:   providerID,
-		Email:        userEmail,
-		Name:         userName,
-		AvatarURL:    userAvatar,
-	}
-
-	user, err := a.storage.ResolveUserByProvider(ctx, &userParams)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve user by provider: %w", err)
-	}
-	return user, nil
 }
 
 // Creates and signs a new JWT for the given user.

@@ -7,3 +7,7 @@ const (
 	ProviderGoogle Provider = "google"
 	ProviderApple  Provider = "apple"
 )
+
+func (p Provider) String() string {
+	return string(p)
+}

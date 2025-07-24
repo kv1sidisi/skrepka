@@ -43,6 +43,9 @@ var (
 	once     sync.Once
 )
 
+// Get loads the configuration from file and environment variables into a singleton instance.
+// It uses sync.Once to ensure the configuration is loaded only once.
+// The function will terminate the application if loading fails.
 func Get() *Config {
 	once.Do(func() {
 		configPath := os.Getenv("CONFIG_PATH")

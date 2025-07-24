@@ -26,8 +26,10 @@ type Storage struct {
 }
 
 // NewStorage creates a connection pool to postgres and initializes Storage.
+// NewStorage creates a new connection pool to the PostgreSQL database
+// and returns an initialized Storage instance.
 func NewStorage() (*Storage, error) {
-	cfg := config.MustLoad()
+	cfg := config.Get()
 	dsn := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=%s", cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.SSLMode)
 	safeDSN := fmt.Sprintf("postgresql://%s:***@%s:%s/%s?sslmode=%s", cfg.DBUser, cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.SSLMode)
 	slog.Debug("connecting to database with dsn", slog.String("dsn", safeDSN))

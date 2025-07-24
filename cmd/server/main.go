@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/kv1sidisi/skrepka/internal/config"
-	"github.com/kv1sidisi/skrepka/internal/handler"
+	"github.com/kv1sidisi/skrepka/internal/handler/health"
 	"github.com/kv1sidisi/skrepka/internal/logger"
 	"github.com/kv1sidisi/skrepka/internal/service"
 	"github.com/kv1sidisi/skrepka/internal/storage"
@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	cfg := config.MustLoad()
+	cfg := config.Get()
 
 	//Logger setup
 	writer, err := logger.SetupWriter(cfg.LogPath)
@@ -32,7 +32,7 @@ func main() {
 	defer postgres.Close()
 
 	//Authentication service
-	_ = service.NewAuthService(postgres, log, cfg.TokenTTL, cfg.JWTSecret, cfg.GoogleClientID)
+	_ = service.NewAuthService(postgres, log, cfg.TokenTTL, cfg.JWTSecret)
 
 	// Handlers setup
 	healthHandler := handler.NewHealthHandler(log)
