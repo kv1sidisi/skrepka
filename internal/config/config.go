@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -37,21 +38,37 @@ type Auth struct {
 	GoogleClientID string        `yaml:"google_client_id" env:"GOOGLE_CLIENT_ID" env-required:"true"`
 }
 
-func MustLoad() *Config {
-	configPath := os.Getenv("CONFIG_PATH")
-	if configPath == "" {
-		log.Fatal("CONFIG_PATH environment variable is not set")
-	}
+var (
+	instance *Config
+	once     sync.Once
+)
 
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		log.Fatalf("config file does not exist at: %s", configPath)
-	}
+func Get() *Config {
+	once.Do(func() {
+		configPath := os.Getenv("CONFIG_PATH")
+		if configPath == "" {
+			log.Fatal("CONFIG_PATH environment variable is not set")
+		}
 
-	var cfg Config
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			log.Fatalf("config file does not exist at: %s", configPath)
+		}
 
-	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-		log.Fatalf("cannot read config: %s", err)
-	}
+		var cfg Config
 
-	return &cfg
+		if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
+			log.Fatalf("cannot read config: %s", err)
+		}
+
+		instance = &cfg
+	})
+
+	return instance
+}
+
+// ResetInstanceForTesting resets global config instance.
+// SHOULD BE USED ONLY IN TESTING
+func ResetInstanceForTesting() {
+	instance = nil
+	once = sync.Once{}
 }

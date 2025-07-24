@@ -21,7 +21,7 @@ import (
 func TestMain(m *testing.M) {
 	if os.Getenv("GO_TEST_PROCESS") == "1" {
 		// When in the child process, execute the function under test and exit.
-		_ = MustLoad()
+		_ = Get()
 		return
 	}
 	// In the main process, run all other tests normally.
@@ -95,6 +95,7 @@ func TestMustLoad(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			ResetInstanceForTesting() // Reset the singleton state before each test run.
 			// For non-fatal test cases, run the function in the current process.
 			if !tc.expectFatal {
 				envs := tc.setup(t)
@@ -102,7 +103,7 @@ func TestMustLoad(t *testing.T) {
 					parts := strings.SplitN(env, "=", 2)
 					t.Setenv(parts[0], parts[1])
 				}
-				cfg := MustLoad()
+				cfg := Get()
 				if tc.checkResult != nil {
 					tc.checkResult(t, cfg)
 				}
@@ -110,8 +111,15 @@ func TestMustLoad(t *testing.T) {
 			}
 
 			// For fatal test cases, execute the test in a separate process.
+			var cleanEnv []string
+			for _, env := range os.Environ() {
+				if !strings.HasPrefix(env, "CONFIG_PATH=") {
+					cleanEnv = append(cleanEnv, env)
+				}
+			}
+
 			cmd := exec.Command(os.Args[0], "-test.run="+t.Name())
-			cmd.Env = append(os.Environ(), "GO_TEST_PROCESS=1")
+			cmd.Env = append(cleanEnv, "GO_TEST_PROCESS=1")
 			cmd.Env = append(cmd.Env, tc.setup(t)...)
 
 			output, err := cmd.CombinedOutput()
