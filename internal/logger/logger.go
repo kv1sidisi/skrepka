@@ -27,6 +27,8 @@ func SetupLogger(env string, writer io.Writer) *slog.Logger {
 }
 
 // SetupWriter sets up where logger will write logs
+// SetupWriter creates and returns an io.Writer for the logger.
+// It can be configured to write to a file, stdout, or both.
 func SetupWriter(logPath string) (io.Writer, error) {
 	if logPath == "" {
 		return os.Stdout, nil

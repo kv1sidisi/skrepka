@@ -1,21 +1,24 @@
 package main
 
 import (
-	"github.com/kv1sidisi/skrepka/internal/config"
-	"github.com/kv1sidisi/skrepka/internal/handler"
-	"github.com/kv1sidisi/skrepka/internal/logger"
-	"github.com/kv1sidisi/skrepka/internal/service"
-	"github.com/kv1sidisi/skrepka/internal/storage"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
+
+	"github.com/kv1sidisi/skrepka/internal/config"
+	"github.com/kv1sidisi/skrepka/internal/handler"
+	"github.com/kv1sidisi/skrepka/internal/logger"
+	"github.com/kv1sidisi/skrepka/internal/service/auth"
+	"github.com/kv1sidisi/skrepka/internal/storage"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
-	cfg := config.MustLoad()
+	ctx := context.Background()
+	cfg := config.Get()
 
-	//Logger setup
+	// Logger setup
 	writer, err := logger.SetupWriter(cfg.LogPath)
 	if err != nil {
 		slog.Error("failed to setup log writer", "error", err)
@@ -23,24 +26,28 @@ func main() {
 	}
 	log := logger.SetupLogger(cfg.Env, writer)
 
-	//Storage setup
-	postgres, err := storage.NewStorage()
+	// Storage setup
+	db, err := storage.New(ctx, cfg)
 	if err != nil {
-		slog.Error("failed to init storage", "error", err)
+		log.Error("failed to init storage", "error", err)
 		os.Exit(1)
 	}
-	defer postgres.Close()
+	defer db.Close()
 
-	//Authentication service
-	_ = service.NewAuthService(postgres, log, cfg.TokenTTL, cfg.JWTSecret, cfg.GoogleClientID)
+	userRepo := db.UserRepository()
+
+	// Authentication service
+	authService := auth.NewAuthService(userRepo, log, cfg.TokenTTL, cfg.JWTSecret)
 
 	// Handlers setup
 	healthHandler := handler.NewHealthHandler(log)
+	oidcAuthHandler := handler.NewOIDCHandler(log, authService)
 
-	//HTTP Server setup
+	// HTTP Server setup
 	mux := http.NewServeMux()
 	mux.Handle("/health", healthHandler)
 	mux.Handle("/metrics", promhttp.Handler())
+	mux.HandleFunc("/api/v1/auth/oidc", oidcAuthHandler.HandleOIDCAuthenticate)
 
 	log.Info("starting server", "address", cfg.Address)
 
