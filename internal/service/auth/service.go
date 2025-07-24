@@ -70,7 +70,7 @@ func (a *Service) Authenticate(ctx context.Context, provider models.Provider, to
 		AvatarURL:    claims.AvatarURL,
 	}
 
-	user, err := a.userResolver.ResolveUserByProvider(ctx, params)
+		user, err := a.userResolver.ResolveUserByProvider(ctx, params)
 	if err != nil {
 		log.Error("failed to resolve user", "error", err)
 		return "", fmt.Errorf("%s: %w", op, err)
