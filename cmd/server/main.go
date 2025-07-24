@@ -7,8 +7,7 @@ import (
 	"os"
 
 	"github.com/kv1sidisi/skrepka/internal/config"
-	oidcHandler "github.com/kv1sidisi/skrepka/internal/handler/auth"
-	"github.com/kv1sidisi/skrepka/internal/handler/health"
+	"github.com/kv1sidisi/skrepka/internal/handler"
 	"github.com/kv1sidisi/skrepka/internal/logger"
 	"github.com/kv1sidisi/skrepka/internal/service/auth"
 	"github.com/kv1sidisi/skrepka/internal/storage"
@@ -41,8 +40,8 @@ func main() {
 	authService := auth.NewAuthService(userRepo, log, cfg.TokenTTL, cfg.JWTSecret)
 
 	// Handlers setup
-	healthHandler := health.NewHealthHandler(log)
-	oidcAuthHandler := oidcHandler.NewOIDCHandler(log, authService)
+	healthHandler := handler.NewHealthHandler(log)
+	oidcAuthHandler := handler.NewOIDCHandler(log, authService)
 
 	// HTTP Server setup
 	mux := http.NewServeMux()
