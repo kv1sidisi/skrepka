@@ -36,14 +36,17 @@ type Service struct {
 // NewAuthService creates new authentication service.
 // It requires storage, logger, and settings for JWT.
 // Returns pointer to new service.
-func NewAuthService(storage UserResolver, log *slog.Logger, tokenTTL time.Duration, jwtSecret string) *Service {
+func NewAuthService(storage UserResolver, log *slog.Logger, tokenTTL time.Duration, jwtSecret string) (*Service, error) {
+	if jwtSecret == "" {
+		return nil, fmt.Errorf("jwt secret cannot be empty")
+	}
 	return &Service{
 		userResolver: storage,
 		log:          log,
 		tokenTTl:     tokenTTL,
 		jwtSecret:    jwtSecret,
 		providers:    providerRegistry,
-	}
+	}, nil
 }
 
 // Authenticate manages entire authentication flow for given provider.

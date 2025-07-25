@@ -1,9 +1,8 @@
 package config
 
 import (
-	"log"
+	"fmt"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -42,40 +41,23 @@ type Auth struct {
 	GoogleClientID string        `yaml:"google_client_id" env:"GOOGLE_CLIENT_ID" env-required:"true"`
 }
 
-var (
-	instance *Config
-	once     sync.Once
-)
+// Load reads configuration from file and environment variables.
+// Returns pointer to Config and error on failure.
+func Load() (*Config, error) {
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		return nil, fmt.Errorf("CONFIG_PATH environment variable is not set")
+	}
 
-// Get reads configuration from file and environment variables.
-// This function makes sure configuration is loaded only one time.
-// Returns pointer to config settings.
-func Get() *Config {
-	once.Do(func() {
-		configPath := os.Getenv("CONFIG_PATH")
-		if configPath == "" {
-			log.Fatal("CONFIG_PATH environment variable is not set")
-		}
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("config file does not exist at: %s", configPath)
+	}
 
-		if _, err := os.Stat(configPath); os.IsNotExist(err) {
-			log.Fatalf("config file does not exist at: %s", configPath)
-		}
+	var cfg Config
 
-		var cfg Config
+	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
+		return nil, fmt.Errorf("cannot read config: %w", err)
+	}
 
-		if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-			log.Fatalf("cannot read config: %s", err)
-		}
-
-		instance = &cfg
-	})
-
-	return instance
-}
-
-// ResetInstanceForTesting clears saved config settings.
-// This is helper function used only for tests to keep them clean.
-func ResetInstanceForTesting() {
-	instance = nil
-	once = sync.Once{}
+	return &cfg, nil
 }
