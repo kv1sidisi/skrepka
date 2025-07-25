@@ -1,6 +1,7 @@
 package models
 
-// Provider - a typed constant for auth provider names.
+// Provider is special type for auth provider names.
+// Using this type helps avoid mistakes with strings.
 type Provider string
 
 const (

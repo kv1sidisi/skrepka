@@ -10,14 +10,16 @@ import (
 	"github.com/kv1sidisi/skrepka/internal/models"
 )
 
-// UserRepository handles database operations related to users.
+// UserRepository handles all database operations related to users.
 type UserRepository struct {
 	db DBConnection
 }
 
-// ResolveUserByProvider finds an existing user or creates a new one based on provider information.
+// ResolveUserByProvider finds existing user or creates new one based on provider information.
+// This function handles main logic for user sign-in and sign-up.
+// Returns pointer to user model.
 func (r *UserRepository) ResolveUserByProvider(ctx context.Context, params *ResolveUserParams) (*models.User, error) {
-	// Step 1: Attempt to find the user directly via the auth provider.
+	// Step 1: Attempt to find user directly via auth provider.
 	query := `
         SELECT id, user_id, provider_name, provider_id
         FROM auth_providers
@@ -32,7 +34,7 @@ func (r *UserRepository) ResolveUserByProvider(ctx context.Context, params *Reso
 
 	switch {
 	case err == nil:
-		// Case 1: Auth provider found. Fetch the associated user and return.
+		// Case 1: Auth provider found. Fetch associated user and return.
 		return r.findUserByID(ctx, authProvider.UserID)
 	case errors.Is(err, pgx.ErrNoRows):
 		// Case 2 & 3: Auth provider not found. Proceed to check by email.
@@ -41,24 +43,24 @@ func (r *UserRepository) ResolveUserByProvider(ctx context.Context, params *Reso
 		return nil, fmt.Errorf("failed to find auth provider: %w", err)
 	}
 
-	// Step 2: Attempt to find the user by email.
+	// Step 2: Attempt to find user by email.
 	user, err := r.findUserByEmail(ctx, params.Email)
 	switch {
 	case err == nil:
-		// Case 2: User found. Create the new auth provider for this existing user.
+		// Case 2: User found. Create new auth provider for this existing user.
 		err = r.createAuthProvider(ctx, user.ID, params)
 		if err != nil {
 			return nil, err
 		}
 		return user, nil
 	case errors.Is(err, pgx.ErrNoRows):
-		// Case 3: User not found by email either. Proceed to create a new user.
+		// Case 3: User not found by email either. Proceed to create new user.
 	default:
 		// An unexpected database error occurred.
 		return nil, fmt.Errorf("failed to find user by email: %w", err)
 	}
 
-	// Step 3: Create a new user and a new auth provider.
+	// Step 3: Create new user and new auth provider.
 	newUser, err := r.createUser(ctx, params)
 	if err != nil {
 		return nil, err
@@ -66,14 +68,15 @@ func (r *UserRepository) ResolveUserByProvider(ctx context.Context, params *Reso
 
 	err = r.createAuthProvider(ctx, newUser.ID, params)
 	if err != nil {
-		// In a real-world scenario, this two-step write (user and provider) should be wrapped in a transaction.
+		// In real-world scenario, this two-step write (user and provider) should be wrapped in transaction.
 		return nil, err
 	}
 
 	return newUser, nil
 }
 
-// findUserByID retrieves a user by their primary key.
+// findUserByID retrieves user by their primary key.
+// Returns pointer to user model.
 func (r *UserRepository) findUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	query := `
         SELECT id, email, name, avatar_url, created_at, updated_at
@@ -94,7 +97,8 @@ func (r *UserRepository) findUserByID(ctx context.Context, id uuid.UUID) (*model
 	return &user, nil
 }
 
-// findUserByEmail retrieves a user by their email address.
+// findUserByEmail retrieves user by their email address.
+// Returns pointer to user model.
 func (r *UserRepository) findUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	query := `
         SELECT id, email, name, avatar_url, created_at, updated_at
@@ -115,7 +119,8 @@ func (r *UserRepository) findUserByEmail(ctx context.Context, email string) (*mo
 	return &user, nil
 }
 
-// createUser inserts a new user into the database.
+// createUser inserts new user into database.
+// Returns pointer to new user model.
 func (r *UserRepository) createUser(ctx context.Context, params *ResolveUserParams) (*models.User, error) {
 	query := `
         INSERT INTO users (email, name, avatar_url)
@@ -136,7 +141,8 @@ func (r *UserRepository) createUser(ctx context.Context, params *ResolveUserPara
 	return &newUser, nil
 }
 
-// createAuthProvider inserts a new auth_provider record, linking a user to a provider ID.
+// createAuthProvider inserts new auth_provider record, linking user to provider ID.
+// Returns nil on success.
 func (r *UserRepository) createAuthProvider(ctx context.Context, userID uuid.UUID, params *ResolveUserParams) error {
 	query := `
         INSERT INTO auth_providers (user_id, provider_name, provider_id)

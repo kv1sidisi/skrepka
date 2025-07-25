@@ -24,8 +24,9 @@ func init() {
 	RegisterProvider(models.ProviderGoogle, googleAuth)
 }
 
-// Validate checks the validity of a Google ID token and extracts user claims.
-// It calls Google's token validation service and maps the result to the standardized ProviderClaims.
+// Validate checks validity of Google ID token.
+// It calls Google's validation service and gets user information.
+// Returns user claims like email and name.
 func (g *GoogleAuthenticator) Validate(ctx context.Context, token string) (*ProviderClaims, error) {
 	payload, err := idtoken.Validate(ctx, token, g.googleClientID)
 	if err != nil {

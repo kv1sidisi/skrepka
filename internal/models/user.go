@@ -5,7 +5,8 @@ import (
 	"time"
 )
 
-// User represents users entity in database.
+// User represents user entity in our database.
+// It stores main information about user.
 type User struct {
 	ID        uuid.UUID `db:"id"`
 	Email     string    `db:"email"`

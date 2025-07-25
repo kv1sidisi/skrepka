@@ -11,17 +11,20 @@ import (
 	"time"
 )
 
+// Claims contains data for our internal JWT.
+// It includes standard JWT claims and our custom UserID.
 type Claims struct {
 	jwt.RegisteredClaims
 	UserID uuid.UUID `json:"user_id"`
 }
 
-// UserResolver defines the dependency for resolving a user in the storage layer.
-// This interface allows for easier testing and decoupling from the concrete storage implementation.
+// UserResolver is interface for resolving user in storage layer.
+// This interface allows for easier testing and decoupling from concrete storage implementation.
 type UserResolver interface {
 	ResolveUserByProvider(ctx context.Context, params *storage.ResolveUserParams) (*models.User, error)
 }
 
+// Service handles all business logic for authentication.
 type Service struct {
 	userResolver UserResolver
 	log          *slog.Logger
@@ -30,6 +33,9 @@ type Service struct {
 	providers    map[models.Provider]ProviderAuthenticator
 }
 
+// NewAuthService creates new authentication service.
+// It requires storage, logger, and settings for JWT.
+// Returns pointer to new service.
 func NewAuthService(storage UserResolver, log *slog.Logger, tokenTTL time.Duration, jwtSecret string) *Service {
 	return &Service{
 		userResolver: storage,
@@ -40,15 +46,15 @@ func NewAuthService(storage UserResolver, log *slog.Logger, tokenTTL time.Durati
 	}
 }
 
-// Authenticate orchestrates the entire authentication flow for a given provider.
-// It selects the appropriate strategy, validates the external token, resolves the user,
-// and issues a new internal JWT.
+// Authenticate manages entire authentication flow for given provider.
+// It validates external token, finds or creates user, and issues new internal JWT.
+// Returns new JWT as string.
 func (a *Service) Authenticate(ctx context.Context, provider models.Provider, token string) (string, error) {
 	const op = "AuthService.Authenticate"
 
 	authenticator, ok := a.providers[provider]
 	if !ok {
-		// This is a server configuration error, so it's appropriate to log it here.
+		// This is server configuration error, so it's appropriate to log it here.
 		a.log.Error("unsupported provider requested", slog.String("provider", provider.String()))
 		return "", fmt.Errorf("%s: unsupported provider", op)
 	}
@@ -74,7 +80,8 @@ func (a *Service) Authenticate(ctx context.Context, provider models.Provider, to
 	return a.createJWT(user)
 }
 
-// Creates and signs a new JWT for the given user.
+// createJWT creates and signs new JWT for given user.
+// Returns signed JWT as string.
 func (a *Service) createJWT(user *models.User) (string, error) {
 	claims := Claims{
 		RegisteredClaims: jwt.RegisteredClaims{

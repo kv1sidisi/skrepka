@@ -12,12 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestMain serves as a wrapper for the test suite, enabling a special execution mode
-// to test functions that terminate the program, such as those using log.Fatal().
-// Standard tests cannot catch os.Exit() calls, so this approach is necessary.
-//
-// The test is run in a separate child process by setting a specific environment variable.
-// The main test process then analyzes the exit code and output of the child process.
+// TestMain is wrapper for test suite.
+// It allows to test functions that stop program, like log.Fatal().
+// Standard tests cannot catch os.Exit() calls, so this way is necessary.
 func TestMain(m *testing.M) {
 	if os.Getenv("GO_TEST_PROCESS") == "1" {
 		// When in the child process, execute the function under test and exit.
@@ -28,10 +25,10 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-// TestMustLoad covers all execution paths for the MustLoad function.
+// TestMustLoad checks all possible ways Get() function can run.
 func TestMustLoad(t *testing.T) {
-	// createTempConfig is a helper function to generate a temporary configuration file.
-	// It uses t.TempDir() to ensure automatic cleanup after the test completes.
+	// createTempConfig is helper function to create temporary config file.
+	// It uses t.TempDir() to clean up file after test is done.
 	createTempConfig := func(t *testing.T, content string) string {
 		t.Helper()
 		dir := t.TempDir()
@@ -41,7 +38,7 @@ func TestMustLoad(t *testing.T) {
 		return path
 	}
 
-	// testCases defines a table of test scenarios for the MustLoad function.
+	// testCases has all test scenarios for Get() function.
 	testCases := []struct {
 		name             string
 		setup            func(t *testing.T) []string
@@ -49,7 +46,7 @@ func TestMustLoad(t *testing.T) {
 		expectFatal      bool
 		fatalMsgContains string
 	}{
-		// Test case 1: Verifies the successful loading of a valid configuration.
+		// Test case 1: Checks successful load of valid configuration.
 		{
 			name: "Success: Valid config and all envs set",
 			setup: func(t *testing.T) []string {
@@ -60,11 +57,11 @@ func TestMustLoad(t *testing.T) {
 					"DB_PASSWORD=test_pass",
 					"JWT_SECRET=test_secret",
 					"GOOGLE_CLIENT_ID=test_google_id",
-					// This environment variable should override the value from the YAML file.
+					// This environment variable should override value from YAML file.
 					"ENV=prod",
 				}
 			},
-			// checkResult validates the fields of the resulting Config struct.
+			// checkResult validates fields of resulting Config struct.
 			checkResult: func(t *testing.T, cfg *Config) {
 				require.NotNil(t, cfg)
 				require.Equal(t, "prod", cfg.Env)
@@ -75,14 +72,14 @@ func TestMustLoad(t *testing.T) {
 				require.Equal(t, 30*time.Minute, cfg.TokenTTL)
 			},
 		},
-		// Test case 2: Verifies that the program terminates if CONFIG_PATH is not set.
+		// Test case 2: Checks that program stops if CONFIG_PATH is not set.
 		{
 			name:             "Failure: CONFIG_PATH not set",
 			setup:            func(t *testing.T) []string { return nil },
 			expectFatal:      true,
 			fatalMsgContains: "CONFIG_PATH environment variable is not set",
 		},
-		// Test case 3: Verifies that the program terminates if the config file does not exist.
+		// Test case 3: Checks that program stops if config file does not exist.
 		{
 			name: "Failure: Config file does not exist",
 			setup: func(t *testing.T) []string {
@@ -95,8 +92,8 @@ func TestMustLoad(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ResetInstanceForTesting() // Reset the singleton state before each test run.
-			// For non-fatal test cases, run the function in the current process.
+			ResetInstanceForTesting() // Reset singleton state before each test run.
+			// For non-fatal test cases, run function in current process.
 			if !tc.expectFatal {
 				envs := tc.setup(t)
 				for _, env := range envs {
@@ -110,7 +107,7 @@ func TestMustLoad(t *testing.T) {
 				return
 			}
 
-			// For fatal test cases, execute the test in a separate process.
+			// For fatal test cases, execute test in separate process.
 			var cleanEnv []string
 			for _, env := range os.Environ() {
 				if !strings.HasPrefix(env, "CONFIG_PATH=") {
@@ -124,14 +121,14 @@ func TestMustLoad(t *testing.T) {
 
 			output, err := cmd.CombinedOutput()
 
-			// Assert that the command failed as expected.
+			// Assert that command failed as expected.
 			require.Error(t, err, "Expected command to fail, but it succeeded")
 			var exitErr *exec.ExitError
 			ok := errors.As(err, &exitErr)
 			require.True(t, ok, "Expected error to be of type *exec.ExitError")
 			require.False(t, exitErr.Success(), "Expected command to exit with a non-zero status")
 
-			// Assert that the output contains the expected fatal error message.
+			// Assert that output contains expected fatal error message.
 			require.True(t, strings.Contains(string(output), tc.fatalMsgContains),
 				"expected log output to contain '%s', but got '%s'", tc.fatalMsgContains, string(output),
 			)

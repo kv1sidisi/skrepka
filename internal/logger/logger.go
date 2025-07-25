@@ -8,8 +8,9 @@ import (
 	"path/filepath"
 )
 
-// SetupLogger used to set up logger based on env level.
-// returns slog.Logger on success
+// SetupLogger creates new logger based on environment.
+// It helps to have different log formats for development and production.
+// Returns pointer to new logger.
 func SetupLogger(env string, writer io.Writer) *slog.Logger {
 	var logger *slog.Logger
 
@@ -26,9 +27,9 @@ func SetupLogger(env string, writer io.Writer) *slog.Logger {
 	return logger
 }
 
-// SetupWriter sets up where logger will write logs
-// SetupWriter creates and returns an io.Writer for the logger.
-// It can be configured to write to a file, stdout, or both.
+// SetupWriter decides where to write logs.
+// It can be file, console, or both.
+// Returns io.Writer to be used by logger.
 func SetupWriter(logPath string) (io.Writer, error) {
 	if logPath == "" {
 		return os.Stdout, nil

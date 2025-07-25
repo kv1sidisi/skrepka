@@ -10,19 +10,21 @@ import (
 	"github.com/kv1sidisi/skrepka/internal/models"
 )
 
-// OIDCAuthenticator defines the interface for the authentication service.
-// This allows the handler to be decoupled from the concrete service implementation.
+// OIDCAuthenticator is interface for authentication service.
+// Using interface helps to easily change auth service later if needed.
 type OIDCAuthenticator interface {
 	Authenticate(ctx context.Context, provider models.Provider, token string) (string, error)
 }
 
-// OIDCHandler handles HTTP requests for authentication.
+// OIDCHandler handles HTTP requests for user authentication.
 type OIDCHandler struct {
 	log     *slog.Logger
 	service OIDCAuthenticator
 }
 
-// NewOIDCHandler creates a new instance of OIDCHandler.
+// NewOIDCHandler creates new OIDCHandler.
+// It needs logger and authentication service to work.
+// Returns pointer to new OIDCHandler.
 func NewOIDCHandler(log *slog.Logger, service OIDCAuthenticator) *OIDCHandler {
 	return &OIDCHandler{
 		log:     log,
@@ -30,7 +32,9 @@ func NewOIDCHandler(log *slog.Logger, service OIDCAuthenticator) *OIDCHandler {
 	}
 }
 
-// HandleOIDCAuthenticate processes authentication requests.
+// HandleOIDCAuthenticate processes user authentication request.
+// It reads provider's token from request, and asks auth service to check it.
+// Returns new JWT for our application.
 func (h *OIDCHandler) HandleOIDCAuthenticate(w http.ResponseWriter, r *http.Request) {
 	const op = "OIDCHandler.HandleOIDCAuthenticate"
 	log := h.log.With(slog.String("op", op))
@@ -53,14 +57,14 @@ func (h *OIDCHandler) HandleOIDCAuthenticate(w http.ResponseWriter, r *http.Requ
 
 	jwt, err := h.service.Authenticate(r.Context(), req.Provider, req.IDToken)
 	if err != nil {
-		// Check if the error is a client-side validation or provider error.
+		// Check if error is client-side validation or provider error.
 		if errors.Is(err, models.ErrProvider) || errors.Is(err, models.ErrValidation) {
 			log.Warn("authentication failed", "error", err)
 			http.Error(w, "Authentication failed: invalid token or provider error", http.StatusUnauthorized)
 			return
 		}
 
-		// For all other errors, assume it's a server-side problem.
+		// For all other errors, assume it's server-side problem.
 		log.Error("internal authentication error", "error", err)
 		http.Error(w, "An internal error occurred", http.StatusInternalServerError)
 		return

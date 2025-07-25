@@ -6,18 +6,23 @@ import (
 	"net/http"
 )
 
+// HealthHandler has endpoint to check if service is working.
 type HealthHandler struct {
 	log *slog.Logger
 }
 
+// NewHealthHandler creates new HealthHandler.
+// It needs logger to write information about requests.
+// Returns pointer to new HealthHandler.
 func NewHealthHandler(log *slog.Logger) *HealthHandler {
 	return &HealthHandler{
 		log: log,
 	}
 }
 
-// ServeHTTP handles the health check endpoint.
-// It's used by external services to verify that the application is running.
+// ServeHTTP handles requests for health check.
+// This is useful for other services to see if our application is alive.
+// Returns JSON message that says "status": "ok".
 func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	const op = "handler.HealthHandler.ServeHTTP"
 	log := h.log.With(slog.String("op", op))
