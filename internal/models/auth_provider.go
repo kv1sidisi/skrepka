@@ -2,7 +2,8 @@ package models
 
 import "github.com/google/uuid"
 
-// AuthProvider represents database entity about authentication method.
+// AuthProvider represents authentication method in database.
+// It links user in our system to their ID from external provider like Google.
 type AuthProvider struct {
 	ID           uuid.UUID `db:"id"`
 	UserID       uuid.UUID `db:"user_id"`

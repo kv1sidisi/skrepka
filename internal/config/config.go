@@ -9,6 +9,7 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
+// Config stores all settings application needs to start and run correctly.
 type Config struct {
 	Env        string `yaml:"env" env:"ENV" env-default:"local"`
 	LogPath    string `yaml:"log_path" env:"LOG_PATH" env-default:"./logs/skrepka.log"`
@@ -17,12 +18,14 @@ type Config struct {
 	Auth       `yaml:"auth"`
 }
 
+// HTTPServer stores settings for web server, like which address and port to use.
 type HTTPServer struct {
 	Address     string        `yaml:"address" env-default:":4000"`
 	Timeout     time.Duration `yaml:"timeout" env-default:"4s"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
 }
 
+// DB stores settings to connect to postgres database.
 type DB struct {
 	DBHost     string `yaml:"host" env:"DB_HOST" env-default:"localhost"`
 	DBPort     string `yaml:"port" env:"DB_PORT" env-default:"5432"`
@@ -32,6 +35,7 @@ type DB struct {
 	SSLMode    string `yaml:"sslmode" env-default:"disable"`
 }
 
+// Auth stores settings for authentication, like secrets for signing tokens.
 type Auth struct {
 	JWTSecret      string        `yaml:"jwt_secret" env:"JWT_SECRET" env-required:"true"`
 	TokenTTL       time.Duration `yaml:"token_ttl" env-default:"1h"`
@@ -43,9 +47,9 @@ var (
 	once     sync.Once
 )
 
-// Get loads the configuration from file and environment variables into a singleton instance.
-// It uses sync.Once to ensure the configuration is loaded only once.
-// The function will terminate the application if loading fails.
+// Get reads configuration from file and environment variables.
+// This function makes sure configuration is loaded only one time.
+// Returns pointer to config settings.
 func Get() *Config {
 	once.Do(func() {
 		configPath := os.Getenv("CONFIG_PATH")
@@ -69,8 +73,8 @@ func Get() *Config {
 	return instance
 }
 
-// ResetInstanceForTesting resets global config instance.
-// SHOULD BE USED ONLY IN TESTING
+// ResetInstanceForTesting clears saved config settings.
+// This is helper function used only for tests to keep them clean.
 func ResetInstanceForTesting() {
 	instance = nil
 	once = sync.Once{}

@@ -12,21 +12,21 @@ import (
 	"log/slog"
 )
 
-// DBConnection defines the interface for database operations, satisfied by *pgxpool.Pool.
-// This abstraction is used by repositories.
+// DBConnection is interface for database operations.
+// It helps to use real database or mock for tests.
 type DBConnection interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 	Close()
 }
 
-// Storage manages the database connection pool.
+// Storage manages database connection pool.
 type Storage struct {
 	pool *pgxpool.Pool
 }
 
-// New creates a new connection pool to the PostgreSQL database
-// and returns an initialized Storage instance.
+// New creates new connection pool to PostgreSQL database.
+// Returns initialized Storage instance.
 func New(ctx context.Context, cfg *config.Config) (*Storage, error) {
 	dsn := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=%s", cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.SSLMode)
 	safeDSN := fmt.Sprintf("postgresql://%s:***@%s:%s/%s?sslmode=%s", cfg.DBUser, cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.SSLMode)
@@ -46,20 +46,20 @@ func New(ctx context.Context, cfg *config.Config) (*Storage, error) {
 	}, nil
 }
 
-// Close closes the database connection pool.
+// Close closes database connection pool.
 func (s *Storage) Close() {
 	if s.pool != nil {
 		s.pool.Close()
 	}
 }
 
-// UserRepository returns a new repository for user-related database operations.
+// UserRepository returns new repository for user-related database operations.
 func (s *Storage) UserRepository() *UserRepository {
 	return &UserRepository{db: s.pool}
 }
 
-// ResolveUserParams defines the input parameters for resolving a user.
-// It is used by the UserRepository.
+// ResolveUserParams defines input parameters for resolving user.
+// It is used by UserRepository.
 type ResolveUserParams struct {
 	ProviderName models.Provider
 	ProviderID   string

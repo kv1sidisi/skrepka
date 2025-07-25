@@ -3,15 +3,14 @@ package models
 import "errors"
 
 var (
-	// ErrValidation is returned when input data provided by a client is invalid.
-	// This could be an invalid token, missing fields, etc.
-	// It typically results in a 400 or 401 HTTP status.
+	// ErrValidation means client provided invalid data.
+	// For example, token is bad or some fields are missing.
+	// Usually causes 400 or 401 HTTP error.
 	ErrValidation = errors.New("validation error")
 
-	// ErrProvider is returned when an external provider (e.g., Google)
-	// cannot validate the token.
+	// ErrProvider means external provider like Google cannot validate token.
 	ErrProvider = errors.New("provider error")
 
-	// ErrNotFound is returned when a requested entity is not found.
+	// ErrNotFound means requested item was not found in database.
 	ErrNotFound = errors.New("not found")
 )
