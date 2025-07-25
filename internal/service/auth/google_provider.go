@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"fmt"
-	"github.com/kv1sidisi/skrepka/internal/config"
 	"github.com/kv1sidisi/skrepka/internal/models"
 	"google.golang.org/api/idtoken"
 )
@@ -16,12 +15,6 @@ func NewGoogleAuthenticator(googleClientID string) *GoogleAuthenticator {
 	return &GoogleAuthenticator{
 		googleClientID: googleClientID,
 	}
-}
-
-func init() {
-	cfg := config.Get()
-	googleAuth := NewGoogleAuthenticator(cfg.GoogleClientID)
-	RegisterProvider(models.ProviderGoogle, googleAuth)
 }
 
 // Validate checks validity of Google ID token.

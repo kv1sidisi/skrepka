@@ -3,17 +3,19 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
 
-	"fmt"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/kv1sidisi/skrepka/internal/config"
 	"github.com/kv1sidisi/skrepka/internal/handler"
 	"github.com/kv1sidisi/skrepka/internal/logger"
+	"github.com/kv1sidisi/skrepka/internal/models"
 	"github.com/kv1sidisi/skrepka/internal/service/auth"
 	"github.com/kv1sidisi/skrepka/internal/storage"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -21,7 +23,10 @@ import (
 
 func main() {
 	ctx := context.Background()
-	cfg := config.Get()
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
 
 	// Logger setup
 	writer, err := logger.SetupWriter(cfg.LogPath)
@@ -61,8 +66,17 @@ func main() {
 
 	userRepo := db.UserRepository()
 
+	// Setup authentication providers.
+	// We create provider instances here and register them.
+	googleAuth := auth.NewGoogleAuthenticator(cfg.GoogleClientID)
+	auth.RegisterProvider(models.ProviderGoogle, googleAuth)
+
 	// Authentication service
-	authService := auth.NewAuthService(userRepo, log, cfg.TokenTTL, cfg.JWTSecret)
+	authService, err := auth.NewAuthService(userRepo, log, cfg.TokenTTL, cfg.JWTSecret)
+	if err != nil {
+		log.Error("failed to create auth service", "error", err)
+		os.Exit(1)
+	}
 
 	// Handlers setup
 	healthHandler := handler.NewHealthHandler(log)
