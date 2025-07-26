@@ -1,11 +1,10 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
 
 COPY go.mod go.sum ./
 
-#RUN go mod download
-RUN --mount=type=cache,target=/go/pkg/mod go mod download
+RUN go mod download
 
 COPY . .
 
@@ -15,14 +14,7 @@ FROM alpine:3.22.1
 
 RUN apk add --no-cache curl=8.14.1-r1
 
-WORKDIR /app
-RUN mkdir configs
-
 COPY --from=builder /app/skrepka-backend /app/skrepka-backend
-
-COPY --from=builder /app/migrations /app/migrations
-
-COPY --from=builder /app/configs/config.yml /app/configs/config.yml
 
 EXPOSE 4000
 

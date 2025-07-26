@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     name: Test and Lint Code
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -23,13 +23,14 @@ jobs:
         run: go test -v ./...
 
       - name: Lint
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@v6
         with:
+          version: v1.59
           args: --timeout=5m
 
   lint-dockerfile:
     name: Lint Dockerfile
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,7 +43,7 @@ jobs:
     name: Build and Push Docker Image
     needs: [test, lint-dockerfile]
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
@@ -65,7 +66,7 @@ jobs:
   scan-image-vulnerabilities:
     name: Scan Docker Image for Vulnerabilities
     needs: build-and-push-image
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.24.0

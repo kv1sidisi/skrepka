@@ -41,7 +41,3 @@ go.work.sum
 # Crash log files
 crash.log
 
-# Logs
-/logs/
-*.log
-

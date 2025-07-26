@@ -20,13 +20,8 @@ services:
     build: .
     ports:
       - "${APP_PORT:-4000}:4000"
-    volumes:
-      - ./configs:/app/configs
-      - ./migrations:/migrations
-    env_file:
-      - .env
     environment:
-      - DB_HOST=postgres
+      - DB_SOURCE=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:${DB_PORT}/${DB_NAME}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
