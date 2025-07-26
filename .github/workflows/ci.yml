@@ -92,6 +92,8 @@ jobs:
     needs: [build-and-push-image]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      packages: read
     steps:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.24.0
