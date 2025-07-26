@@ -38,10 +38,35 @@ jobs:
         with:
           dockerfile: ./Dockerfile
 
+  scan-image-for-pr:
+    name: Build and Scan Image for PR
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Build image locally
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          push: false
+          tags: local-image-for-pr:latest
+
+      - name: Run Trivy vulnerability scanner on local image
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: 'local-image-for-pr:latest'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
   build-and-push-image:
     name: Build and Push Docker Image
     needs: [test, lint-dockerfile]
-    if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -62,10 +87,10 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
 
-  scan-image-vulnerabilities:
-    name: Scan Docker Image for Vulnerabilities
-    needs: build-and-push-image
-    if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
+  scan-pushed-image:
+    name: Scan Pushed Docker Image
+    needs: [build-and-push-image]
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Run Trivy vulnerability scanner
