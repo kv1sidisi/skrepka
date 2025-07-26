@@ -35,7 +35,7 @@ func NewOIDCHandler(log *slog.Logger, service OIDCAuthenticator) *OIDCHandler {
 // HandleOIDCAuthenticate processes user authentication request.
 // It reads provider's token from request, and asks auth service to check it.
 // Returns new JWT for our application.
-func (h *OIDCHandler) HandleOIDCAuthenticate(w http.ResponseWriter, r *http.Request) {
+func (h *OIDCHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	const op = "OIDCHandler.HandleOIDCAuthenticate"
 	log := h.log.With(slog.String("op", op))
 

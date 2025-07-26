@@ -55,7 +55,7 @@ func (s *Storage) Close() {
 
 // UserRepository returns new repository for user-related database operations.
 func (s *Storage) UserRepository() *UserRepository {
-	return &UserRepository{db: s.pool}
+	return &UserRepository{Db: s.pool}
 }
 
 // ResolveUserParams defines input parameters for resolving user.

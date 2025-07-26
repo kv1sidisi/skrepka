@@ -88,7 +88,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/health", healthHandler)
 	mux.Handle("/metrics", promhttp.Handler())
-	mux.HandleFunc("/api/v1/auth/oidc", oidcAuthHandler.HandleOIDCAuthenticate)
+	mux.Handle("/api/v1/auth/oidc", oidcAuthHandler)
 
 	log.Info("starting server", "address", cfg.Address)
 
