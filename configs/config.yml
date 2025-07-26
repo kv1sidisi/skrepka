@@ -1,0 +1,21 @@
+env: "dev"
+log_path: "./logs/skrepka.logs"
+
+http_server:
+  address: ":4000"
+  timeout: 4s
+  idle_timeout: 60s
+
+postgres:
+  host: "localhost"
+  port: "5432"
+  password: ""
+  user: "skrepka_user"
+  db_name: "skrepka_db"
+  sslmode: "disable"
+
+auth:
+  jwt_secret: ""
+  token_ttl: 1h
+  google_client_id: ""
+

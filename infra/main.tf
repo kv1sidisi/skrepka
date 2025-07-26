@@ -11,10 +11,26 @@ provider "docker" {
   host = "ssh://${var.server_user}@${var.server_ip}:${var.server_port}"
 }
 
+locals {
+  source_files = setunion(
+    fileset("${path.module}/..", "**/*.go"),
+    fileset("${path.module}/..", "go.mod"),
+    fileset("${path.module}/..", "go.sum")
+  )
+
+  source_hash = jsonencode([
+    for f in local.source_files : filesha256("${path.module}/../${f}")
+  ])
+}
+
 resource "docker_image" "skrepka_backend_image" {
   name = "skrepka-backend:latest"
   build {
     context = ".."
+  }
+
+  triggers = {
+    source_code_hash = local.source_hash
   }
 }
 
@@ -61,8 +77,16 @@ resource "docker_container" "skrepka_backend" {
   }
 
   env = [
-    "DB_SOURCE=postgresql://${var.db_user}:${var.db_password}@${docker_container.postgres.name}:${var.db_port}/${var.db_name}?sslmode=disable"
+    "CONFIG_PATH=/app/configs/config.yml",
+    "DB_HOST=${docker_container.postgres.name}",
+    "DB_PORT=5432",
+    "DB_USER=${var.db_user}",
+    "DB_PASSWORD=${var.db_password}",
+    "DB_NAME=${var.db_name}",
+    "JWT_SECRET=${var.jwt_secret}",
+    "GOOGLE_CLIENT_ID=${var.google_client_id}"
   ]
+
 
   depends_on = [docker_container.postgres]
 }
