@@ -203,5 +203,189 @@ func TestOIDC_SuccessfulLogin_ExistingUser(t *testing.T) {
 	require.NotEmpty(t, authResponse.Token)
 
 	require.NoError(t, mockPool.ExpectationsWereMet())
+}
 
+func TestOIDC_SuccessfulLogin_ExistingUserNewProvider(t *testing.T) {
+	mockUserID := uuid.New()
+	providerID := "google123"
+	userEmail := "test@gmail.com"
+	userName := "testUsername"
+	avatarURL := "test-url.com"
+
+	// Mocking DB Connection pool
+	mockPool, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mockPool.Close()
+
+	mockPool.ExpectQuery(`SELECT (.+) FROM auth_providers WHERE provider_name = \$1 AND provider_id = \$2`).
+		WithArgs(models.ProviderGoogle, providerID).
+		WillReturnError(pgx.ErrNoRows)
+
+	userRows := pgxmock.NewRows([]string{"id", "email", "name", "avatar_url", "created_at", "updated_at"}).
+		AddRow(mockUserID, userEmail, userName, avatarURL, time.Now(), time.Now())
+	mockPool.ExpectQuery(`SELECT (.+) FROM users WHERE email = \$1`).
+		WithArgs(userEmail).
+		WillReturnRows(userRows)
+
+	mockPool.ExpectExec(`
+        INSERT INTO auth_providers`).WithArgs(mockUserID, models.ProviderGoogle, providerID).
+		WillReturnResult(pgxmock.NewResult("INSERT", 1))
+
+	// Mocking authenticator
+	mockClaims := &auth.ProviderClaims{
+		Email:          userEmail,
+		ProviderUserID: providerID,
+		Name:           userName,
+		AvatarURL:      avatarURL,
+	}
+	mockedAuthenticator := &mockProviderAuthenticator{
+		mockClaims,
+		nil,
+	}
+	providerRegistry := auth.Authenticators{
+		models.ProviderGoogle: mockedAuthenticator,
+	}
+
+	ts := newTestServer(t, mockPool, providerRegistry)
+
+	resp := ts.sendOIDCRequest(models.ProviderGoogle, "another very secret token")
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var authResponse models.AuthResponse
+
+	err = json.NewDecoder(resp.Body).Decode(&authResponse)
+	require.NoError(t, err)
+
+	require.NotEmpty(t, authResponse.Token)
+
+	require.NoError(t, mockPool.ExpectationsWereMet())
+
+}
+
+func TestOIDC_ProviderReturnsError(t *testing.T) {
+
+	// Mocking DB Connection pool
+	mockPool, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mockPool.Close()
+
+	// Mocking authenticator
+	mockClaims := &auth.ProviderClaims{}
+	mockedAuthenticator := &mockProviderAuthenticator{
+		mockClaims,
+		models.ErrProvider,
+	}
+
+	providerRegistry := auth.Authenticators{
+		models.ProviderGoogle: mockedAuthenticator,
+	}
+
+	ts := newTestServer(t, mockPool, providerRegistry)
+
+	resp := ts.sendOIDCRequest(models.ProviderGoogle, "another very secret token")
+
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+
+	require.NoError(t, mockPool.ExpectationsWereMet())
+}
+
+func TestOIDC_DatabaseError(t *testing.T) {
+	providerID := "google123"
+	userEmail := "test@gmail.com"
+	userName := "testUsername"
+	avatarURL := "test-url.com"
+
+	// Mocking DB Connection pool
+	mockPool, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mockPool.Close()
+
+	mockPool.ExpectQuery(`SELECT (.+) FROM auth_providers WHERE provider_name = \$1 AND provider_id = \$2`).
+		WithArgs(models.ProviderGoogle, providerID).
+		WillReturnError(fmt.Errorf("test database error"))
+
+	// Mocking authenticator
+	mockClaims := &auth.ProviderClaims{
+		Email:          userEmail,
+		ProviderUserID: providerID,
+		Name:           userName,
+		AvatarURL:      avatarURL,
+	}
+	mockedAuthenticator := &mockProviderAuthenticator{
+		mockClaims,
+		nil,
+	}
+
+	providerRegistry := auth.Authenticators{
+		models.ProviderGoogle: mockedAuthenticator,
+	}
+
+	ts := newTestServer(t, mockPool, providerRegistry)
+
+	resp := ts.sendOIDCRequest(models.ProviderGoogle, "another very secret token")
+
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	require.NoError(t, mockPool.ExpectationsWereMet())
+}
+
+func TestOIDC_BadRequest(t *testing.T) {
+	testCases := []struct {
+		name           string
+		requestBody    string
+		expectedStatus int
+	}{
+		{
+			name:           "Empty Body",
+			requestBody:    `{}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Invalid JSON",
+			requestBody:    `{invalid}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Missing ID Token",
+			requestBody:    fmt.Sprintf(`{"provider": "%s"}`, models.ProviderGoogle),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Missing Provider",
+			requestBody:    `{"id_token": "some-token"}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Mocking DB Connection pool
+			mockPool, err := pgxmock.NewPool()
+			require.NoError(t, err)
+			defer mockPool.Close()
+
+			// Mocking authenticator
+			mockClaims := &auth.ProviderClaims{}
+			mockedAuthenticator := &mockProviderAuthenticator{
+				mockClaims,
+				nil,
+			}
+			providerRegistry := auth.Authenticators{
+				models.ProviderGoogle: mockedAuthenticator,
+			}
+
+			ts := newTestServer(t, mockPool, providerRegistry)
+
+			mockedRequestBody := bytes.NewBufferString(tc.requestBody)
+
+			// Sending HTTP request
+			resp, err := http.Post(ts.server.URL+"/api/v1/auth/oidc", "application/json", mockedRequestBody)
+			require.NoError(ts.t, err)
+
+			require.Equal(t, tc.expectedStatus, resp.StatusCode)
+
+			require.NoError(t, mockPool.ExpectationsWereMet())
+		})
+	}
 }
