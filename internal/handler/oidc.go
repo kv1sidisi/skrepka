@@ -53,6 +53,17 @@ func (h *OIDCHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.Provider == "" {
+		log.Error("validation failed: provider is empty")
+		http.Error(w, "provider field is required", http.StatusBadRequest)
+		return
+	}
+	if req.IDToken == "" {
+		log.Error("validation failed: id_token is empty")
+		http.Error(w, "id_token field is required", http.StatusBadRequest)
+		return
+	}
+
 	log.Info("authentication requested", slog.String("provider", req.Provider.String()))
 
 	jwt, err := h.service.Authenticate(r.Context(), req.Provider, req.IDToken)
