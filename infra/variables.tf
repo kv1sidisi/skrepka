@@ -39,14 +39,24 @@ variable "db_password" {
   type = string
   description = "Skrepka postgres database password"
   sensitive   = true
-  # No default, this is a secret and must be provided.
-
 }
 
 variable "db_name" {
-  type = string
-  default = "skrepka_db"
-  description = "Skrepka postgres database name"
+  description = "PostgreSQL database name"
+  type        = string
+  default     = "skrepka_db"
+}
+
+variable "jwt_secret" {
+  description = "Secret key for signing JWTs"
+  type        = string
+  sensitive   = true
+}
+
+variable "google_client_id" {
+  description = "Google Client ID for OIDC"
+  type        = string
+  sensitive   = true
 }
 
 variable "db_port" {
