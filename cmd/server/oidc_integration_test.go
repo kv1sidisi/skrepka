@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/kv1sidisi/skrepka/internal/handler"
@@ -31,9 +32,63 @@ func (m *mockProviderAuthenticator) Validate(ctx context.Context, token string) 
 	return m.claims, m.err
 }
 
-func TestOIDC_SuccessfulLogin_NewUser(t *testing.T) {
+type testServer struct {
+	t           *testing.T
+	server      *httptest.Server
+	mockPool    pgxmock.PgxPoolIface
+	authService *auth.Service
+	logger      *slog.Logger
+}
+
+func newTestServer(t *testing.T, pool pgxmock.PgxPoolIface, authenticators auth.Authenticators) *testServer {
+	t.Helper()
+
 	discardLogger := slog.New(slog.NewTextHandler(io.Discard, nil))
 
+	// Mocking User Database repository
+	mockedUserRepo := &storage.UserRepository{
+		Db: pool,
+	}
+
+	mockedAuthService, err := auth.NewAuthService(mockedUserRepo, discardLogger, time.Hour, "very secret key", authenticators)
+	require.NoError(t, err)
+
+	// Mocking mux
+	oidcHandler := handler.NewOIDCHandler(discardLogger, mockedAuthService)
+	mux := http.NewServeMux()
+	mux.Handle("/api/v1/auth/oidc", oidcHandler)
+
+	// Starting test server
+	server := httptest.NewServer(mux)
+
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	return &testServer{
+		t:           t,
+		server:      server,
+		mockPool:    pool,
+		authService: mockedAuthService,
+		logger:      discardLogger,
+	}
+}
+
+func (ts *testServer) sendOIDCRequest(provider models.Provider, token string) *http.Response {
+	ts.t.Helper()
+
+	// Mocking HTTP request
+	requestBody := fmt.Sprintf(`{"provider": "%s", "id_token": "%s"}`, provider, token)
+	mockedRequestBody := bytes.NewBufferString(requestBody)
+
+	// Sending HTTP request
+	resp, err := http.Post(ts.server.URL+"/api/v1/auth/oidc", "application/json", mockedRequestBody)
+	require.NoError(ts.t, err)
+
+	return resp
+}
+
+func TestOIDC_SuccessfulLogin_NewUser(t *testing.T) {
 	mockUserID := uuid.New()
 	providerID := "google123"
 	userEmail := "test@gmail.com"
@@ -62,11 +117,6 @@ func TestOIDC_SuccessfulLogin_NewUser(t *testing.T) {
 		WithArgs(mockUserID, models.ProviderGoogle, providerID).
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
-	// Mocking User Database repository
-	mockedUserRepo := &storage.UserRepository{
-		Db: mockPool,
-	}
-
 	// Mocking authenticator
 	mockClaims := &auth.ProviderClaims{
 		Email:          userEmail,
@@ -81,25 +131,10 @@ func TestOIDC_SuccessfulLogin_NewUser(t *testing.T) {
 	providerRegistry := auth.Authenticators{
 		models.ProviderGoogle: mockedAuthenticator,
 	}
-	mockedAuthService, err := auth.NewAuthService(mockedUserRepo, discardLogger, time.Hour, "very secret key", providerRegistry)
-	require.NoError(t, err)
 
-	// Mocking mux
-	oidcHandler := handler.NewOIDCHandler(discardLogger, mockedAuthService)
-	mux := http.NewServeMux()
-	mux.Handle("/api/v1/auth/oidc", oidcHandler)
+	ts := newTestServer(t, mockPool, providerRegistry)
 
-	// Starting test server
-	server := httptest.NewServer(mux)
-	defer server.Close()
-
-	// Mocking HTTP request
-	requestBody := `{"provider": "google", "id_token": "any-fake-token"}`
-	mockedRequestBody := bytes.NewBufferString(requestBody)
-
-	// Sending HTTP request
-	resp, err := http.Post(server.URL+"/api/v1/auth/oidc", "application/json", mockedRequestBody)
-	require.NoError(t, err)
+	resp := ts.sendOIDCRequest(models.ProviderGoogle, "very secret token")
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -115,8 +150,6 @@ func TestOIDC_SuccessfulLogin_NewUser(t *testing.T) {
 }
 
 func TestOIDC_SuccessfulLogin_ExistingUser(t *testing.T) {
-	discardLogger := slog.New(slog.NewTextHandler(io.Discard, nil))
-
 	mockUserID := uuid.New()
 	providerID := "google123"
 	userEmail := "test@gmail.com"
@@ -141,11 +174,6 @@ func TestOIDC_SuccessfulLogin_ExistingUser(t *testing.T) {
         FROM users
         WHERE id = \$1`).WithArgs(mockUserID).WillReturnRows(userRows)
 
-	// Mocking User Database repository
-	mockedUserRepo := &storage.UserRepository{
-		Db: mockPool,
-	}
-
 	// Mocking authenticator
 	mockClaims := &auth.ProviderClaims{
 		Email:          userEmail,
@@ -160,25 +188,10 @@ func TestOIDC_SuccessfulLogin_ExistingUser(t *testing.T) {
 	providerRegistry := auth.Authenticators{
 		models.ProviderGoogle: mockedAuthenticator,
 	}
-	mockedAuthService, err := auth.NewAuthService(mockedUserRepo, discardLogger, time.Hour, "very secret key", providerRegistry)
-	require.NoError(t, err)
 
-	// Mocking mux
-	oidcHandler := handler.NewOIDCHandler(discardLogger, mockedAuthService)
-	mux := http.NewServeMux()
-	mux.Handle("/api/v1/auth/oidc", oidcHandler)
+	ts := newTestServer(t, mockPool, providerRegistry)
 
-	// Starting test server
-	server := httptest.NewServer(mux)
-	defer server.Close()
-
-	// Mocking HTTP request
-	requestBody := `{"provider": "google", "id_token": "any-fake-token"}`
-	mockedRequestBody := bytes.NewBufferString(requestBody)
-
-	// Sending HTTP request
-	resp, err := http.Post(server.URL+"/api/v1/auth/oidc", "application/json", mockedRequestBody)
-	require.NoError(t, err)
+	resp := ts.sendOIDCRequest(models.ProviderGoogle, "another very secret token")
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
