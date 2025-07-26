@@ -65,6 +65,7 @@ jobs:
   scan-image-vulnerabilities:
     name: Scan Docker Image for Vulnerabilities
     needs: build-and-push-image
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Run Trivy vulnerability scanner
