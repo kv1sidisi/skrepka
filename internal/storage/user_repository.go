@@ -12,7 +12,7 @@ import (
 
 // UserRepository handles all database operations related to users.
 type UserRepository struct {
-	db DBConnection
+	Db DBConnection
 }
 
 // ResolveUserByProvider finds existing user or creates new one based on provider information.
@@ -25,7 +25,7 @@ func (r *UserRepository) ResolveUserByProvider(ctx context.Context, params *Reso
         FROM auth_providers
         WHERE provider_name = $1 AND provider_id = $2`
 	var authProvider models.AuthProvider
-	err := r.db.QueryRow(ctx, query, params.ProviderName, params.ProviderID).Scan(
+	err := r.Db.QueryRow(ctx, query, params.ProviderName, params.ProviderID).Scan(
 		&authProvider.ID,
 		&authProvider.UserID,
 		&authProvider.ProviderName,
@@ -83,7 +83,7 @@ func (r *UserRepository) findUserByID(ctx context.Context, id uuid.UUID) (*model
         FROM users
         WHERE id = $1`
 	var user models.User
-	err := r.db.QueryRow(ctx, query, id).Scan(
+	err := r.Db.QueryRow(ctx, query, id).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Name,
@@ -105,7 +105,7 @@ func (r *UserRepository) findUserByEmail(ctx context.Context, email string) (*mo
         FROM users
         WHERE email = $1`
 	var user models.User
-	err := r.db.QueryRow(ctx, query, email).Scan(
+	err := r.Db.QueryRow(ctx, query, email).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Name,
@@ -127,7 +127,7 @@ func (r *UserRepository) createUser(ctx context.Context, params *ResolveUserPara
         VALUES ($1, $2, $3)
         RETURNING id, created_at, updated_at`
 	var newUser models.User
-	err := r.db.QueryRow(ctx, query, params.Email, params.Name, params.AvatarURL).Scan(
+	err := r.Db.QueryRow(ctx, query, params.Email, params.Name, params.AvatarURL).Scan(
 		&newUser.ID,
 		&newUser.CreatedAt,
 		&newUser.UpdatedAt,
@@ -147,7 +147,7 @@ func (r *UserRepository) createAuthProvider(ctx context.Context, userID uuid.UUI
 	query := `
         INSERT INTO auth_providers (user_id, provider_name, provider_id)
         VALUES ($1, $2, $3)`
-	_, err := r.db.Exec(ctx, query, userID, params.ProviderName, params.ProviderID)
+	_, err := r.Db.Exec(ctx, query, userID, params.ProviderName, params.ProviderID)
 	if err != nil {
 		return fmt.Errorf("failed to create auth provider: %w", err)
 	}

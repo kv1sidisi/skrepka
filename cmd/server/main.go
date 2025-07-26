@@ -69,10 +69,12 @@ func main() {
 	// Setup authentication providers.
 	// We create provider instances here and register them.
 	googleAuth := auth.NewGoogleAuthenticator(cfg.GoogleClientID)
-	auth.RegisterProvider(models.ProviderGoogle, googleAuth)
+	providerRegistry := auth.Authenticators{
+		models.ProviderGoogle: googleAuth,
+	}
 
 	// Authentication service
-	authService, err := auth.NewAuthService(userRepo, log, cfg.TokenTTL, cfg.JWTSecret)
+	authService, err := auth.NewAuthService(userRepo, log, cfg.TokenTTL, cfg.JWTSecret, providerRegistry)
 	if err != nil {
 		log.Error("failed to create auth service", "error", err)
 		os.Exit(1)
@@ -86,7 +88,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/health", healthHandler)
 	mux.Handle("/metrics", promhttp.Handler())
-	mux.HandleFunc("/api/v1/auth/oidc", oidcAuthHandler.HandleOIDCAuthenticate)
+	mux.Handle("/api/v1/auth/oidc", oidcAuthHandler)
 
 	log.Info("starting server", "address", cfg.Address)
 

@@ -108,7 +108,10 @@ func TestAuthService_Authenticate(t *testing.T) {
 }
 
 func TestNewAuthService_EmptySecret(t *testing.T) {
-	_, err := NewAuthService(nil, slog.Default(), time.Hour, "")
+	providerRegistry := map[models.Provider]ProviderAuthenticator{
+		models.ProviderGoogle: nil,
+	}
+	_, err := NewAuthService(nil, slog.Default(), time.Hour, "", providerRegistry)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "jwt secret cannot be empty")
 }

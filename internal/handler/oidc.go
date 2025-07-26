@@ -35,7 +35,7 @@ func NewOIDCHandler(log *slog.Logger, service OIDCAuthenticator) *OIDCHandler {
 // HandleOIDCAuthenticate processes user authentication request.
 // It reads provider's token from request, and asks auth service to check it.
 // Returns new JWT for our application.
-func (h *OIDCHandler) HandleOIDCAuthenticate(w http.ResponseWriter, r *http.Request) {
+func (h *OIDCHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	const op = "OIDCHandler.HandleOIDCAuthenticate"
 	log := h.log.With(slog.String("op", op))
 
@@ -50,6 +50,17 @@ func (h *OIDCHandler) HandleOIDCAuthenticate(w http.ResponseWriter, r *http.Requ
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Error("failed to decode request body", "error", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Provider == "" {
+		log.Error("validation failed: provider is empty")
+		http.Error(w, "provider field is required", http.StatusBadRequest)
+		return
+	}
+	if req.IDToken == "" {
+		log.Error("validation failed: id_token is empty")
+		http.Error(w, "id_token field is required", http.StatusBadRequest)
 		return
 	}
 

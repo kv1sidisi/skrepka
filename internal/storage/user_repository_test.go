@@ -111,7 +111,7 @@ func TestUserRepository_ResolveUserByProvider(t *testing.T) {
 
 			tc.mockSetup(mockPool)
 
-			repo := &UserRepository{db: mockPool}
+			repo := &UserRepository{Db: mockPool}
 			user, err := repo.ResolveUserByProvider(context.Background(), inputParams)
 
 			if tc.expectedError {
