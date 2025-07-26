@@ -63,8 +63,8 @@ jobs:
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
 
-  build-and-push-image:
-    name: Build and Push Docker Image
+  build-push-and-scan:
+    name: Build, Push, and Scan Image
     needs: [test, lint-dockerfile]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -74,12 +74,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -87,14 +89,6 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
 
-  scan-pushed-image:
-    name: Scan Pushed Docker Image
-    needs: [build-and-push-image]
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      packages: read
-    steps:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.24.0
         with:
