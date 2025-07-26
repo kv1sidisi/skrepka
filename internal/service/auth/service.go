@@ -24,6 +24,8 @@ type UserResolver interface {
 	ResolveUserByProvider(ctx context.Context, params *storage.ResolveUserParams) (*models.User, error)
 }
 
+type Authenticators map[models.Provider]ProviderAuthenticator
+
 // Service handles all business logic for authentication.
 type Service struct {
 	userResolver UserResolver
@@ -36,9 +38,12 @@ type Service struct {
 // NewAuthService creates new authentication service.
 // It requires storage, logger, and settings for JWT.
 // Returns pointer to new service.
-func NewAuthService(storage UserResolver, log *slog.Logger, tokenTTL time.Duration, jwtSecret string) (*Service, error) {
+func NewAuthService(storage UserResolver, log *slog.Logger, tokenTTL time.Duration, jwtSecret string, providerRegistry map[models.Provider]ProviderAuthenticator) (*Service, error) {
 	if jwtSecret == "" {
 		return nil, fmt.Errorf("jwt secret cannot be empty")
+	}
+	if len(providerRegistry) == 0 {
+		return nil, fmt.Errorf("at least 1 authenticator must be provided")
 	}
 	return &Service{
 		userResolver: storage,

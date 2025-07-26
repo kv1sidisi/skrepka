@@ -69,10 +69,12 @@ func main() {
 	// Setup authentication providers.
 	// We create provider instances here and register them.
 	googleAuth := auth.NewGoogleAuthenticator(cfg.GoogleClientID)
-	auth.RegisterProvider(models.ProviderGoogle, googleAuth)
+	providerRegistry := auth.Authenticators{
+		models.ProviderGoogle: googleAuth,
+	}
 
 	// Authentication service
-	authService, err := auth.NewAuthService(userRepo, log, cfg.TokenTTL, cfg.JWTSecret)
+	authService, err := auth.NewAuthService(userRepo, log, cfg.TokenTTL, cfg.JWTSecret, providerRegistry)
 	if err != nil {
 		log.Error("failed to create auth service", "error", err)
 		os.Exit(1)
