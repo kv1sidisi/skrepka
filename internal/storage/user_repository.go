@@ -135,7 +135,7 @@ func (r *UserRepository) createUser(ctx context.Context, params *UserParams) (*m
 	query := `
         INSERT INTO users (email, name, avatar_url)
         VALUES ($1, $2, $3)
-        RETURNING id, created_at, updated_at`
+        RETURNING *`
 	var newUser models.User
 	err := r.Db.QueryRow(ctx, query, params.Email, params.Name, params.AvatarURL).Scan(
 		&newUser.ID,
