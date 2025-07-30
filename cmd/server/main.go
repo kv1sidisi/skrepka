@@ -83,12 +83,16 @@ func main() {
 	// Handlers setup
 	healthHandler := handler.NewHealthHandler(log)
 	oidcAuthHandler := handler.NewOIDCHandler(log, authService)
+	pactHandler := handler.NewPactHandler(log)
+
+	jwtAuth := handler.JwtAuthMiddleware(log, cfg.JWTSecret)
 
 	// HTTP Server setup
 	mux := http.NewServeMux()
 	mux.Handle("/health", healthHandler)
 	mux.Handle("/metrics", promhttp.Handler())
 	mux.Handle("/api/v1/auth/oidc", oidcAuthHandler)
+	mux.Handle("/api/v1/pacts/", jwtAuth(pactHandler))
 
 	log.Info("starting server", "address", cfg.Address)
 
