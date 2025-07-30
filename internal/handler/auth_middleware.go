@@ -2,13 +2,19 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/kv1sidisi/skrepka/internal/models"
 	"log/slog"
 	"net/http"
 	"strings"
 )
 
+// JwtMiddleware provides http middleware for JWT authentication.
+// It checks for valid JSON Web Token in request header.
+// If token is valid, it passes request to next handler.
+// If not, it returns 401 Unauthorized error.
 type JwtMiddleware struct {
 	log       *slog.Logger
 	next      http.Handler
@@ -23,15 +29,10 @@ func NewJwtMiddleware(log *slog.Logger, next http.Handler, jwtSecret string) *Jw
 	}
 }
 
-type AppClaims struct {
-	UserID string `json:"user_id"`
-	jwt.RegisteredClaims
-}
-
-type contextKey string
-
-const userIDKey = contextKey("userID")
-
+// ServeHTTP extracts token from Authorization header.
+// It validates token and if it is valid, extracts user ID.
+// User ID is then put into request context.
+// Request is passed to next handler in chain.
 func (j *JwtMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	const op = "handler.JwtMiddleware.ServeHTTP"
 	log := j.log.With(slog.String("op", op))
@@ -44,34 +45,28 @@ func (j *JwtMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tParts := strings.Fields(token)
-	if len(tParts) != 2 {
+	bearer, tokenP, ok := strings.Cut(token, " ")
+	if !ok || bearer != "Bearer" {
 		log.Error("authorization token must contain Bearer and Token parts")
 		http.Error(w, "Authorization header is invalid", http.StatusUnauthorized)
 		return
 	}
 
-	if tParts[0] != "Bearer" {
-		log.Error("authorization token first part must be Bearer")
-		http.Error(w, "Authorization header is invalid", http.StatusUnauthorized)
-		return
-	}
-
-	claims := &AppClaims{}
+	claims := &models.AppClaims{}
 	keyFunc := func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return []byte(j.jwtSecret), nil
 	}
-	pToken, err := jwt.ParseWithClaims(tParts[1], claims, keyFunc)
+	_, err := jwt.ParseWithClaims(tokenP, claims, keyFunc)
 	if err != nil {
-		log.Error("failed to parse token", "error", err)
-		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
-		return
-	}
-	if !pToken.Valid {
-		log.Error("parsed token is invalid")
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			log.Warn("token is expired", "error", err)
+		} else {
+			log.Warn("failed to parse token", "error", err)
+		}
+
 		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
 		return
 	}
@@ -83,7 +78,7 @@ func (j *JwtMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	ctx := context.WithValue(req.Context(), userIDKey, userID)
+	ctx := context.WithValue(req.Context(), models.UserIDKey, userID)
 
 	reqWithCtx := req.WithContext(ctx)
 
