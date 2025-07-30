@@ -8,7 +8,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kv1sidisi/skrepka/internal/config"
-	"github.com/kv1sidisi/skrepka/internal/models"
 	"log/slog"
 )
 
@@ -56,14 +55,4 @@ func (s *Storage) Close() {
 // UserRepository returns new repository for user-related database operations.
 func (s *Storage) UserRepository() *UserRepository {
 	return &UserRepository{Db: s.pool}
-}
-
-// ResolveUserParams defines input parameters for resolving user.
-// It is used by UserRepository.
-type ResolveUserParams struct {
-	ProviderName models.Provider
-	ProviderID   string
-	Email        string
-	Name         string
-	AvatarURL    string
 }
