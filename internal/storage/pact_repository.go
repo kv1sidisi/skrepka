@@ -7,13 +7,12 @@ import (
 	"github.com/kv1sidisi/skrepka/internal/models"
 )
 
-// PactRepository handles all database operations related to pacts.
+// PactRepository handles database operations for pacts.
 type PactRepository struct {
 	Db DBConnection
 }
 
-// PactParams defines input parameters for resolving user.
-// It is used by PactRepository.
+// PactParams contains parameters for creating a pact.
 type PactParams struct {
 	Title       string
 	Description string
@@ -21,6 +20,8 @@ type PactParams struct {
 	Status      string
 }
 
+// CreatePact inserts a new pact into the database.
+// Returns the new pact model.
 func (p *PactRepository) CreatePact(ctx context.Context, params *PactParams) (*models.Pact, error) {
 	query := `
 		INSERT INTO pacts (title, description, status, creator_user_id) 

@@ -10,15 +10,18 @@ import (
 	"strings"
 )
 
+// PactRepository is the interface for pact storage.
 type PactRepository interface {
 	CreatePact(ctx context.Context, params *storage.PactParams) (*models.Pact, error)
 }
 
+// Service contains business logic for pacts.
 type Service struct {
 	pactRepo PactRepository
 	log      *slog.Logger
 }
 
+// NewService creates a new pact service.
 func NewService(log *slog.Logger, pactRepo PactRepository) *Service {
 	return &Service{
 		log:      log,
@@ -26,6 +29,8 @@ func NewService(log *slog.Logger, pactRepo PactRepository) *Service {
 	}
 }
 
+// CreatePact creates a new pact.
+// Returns the created pact model.
 func (s *Service) CreatePact(ctx context.Context, title, description string, creatorID uuid.UUID) (*models.Pact, error) {
 	const op = "PactService.CreatePact"
 	log := s.log.With(slog.String("op", op), slog.String("CreatorID", creatorID.String()))
