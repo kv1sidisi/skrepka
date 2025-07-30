@@ -56,3 +56,8 @@ func (s *Storage) Close() {
 func (s *Storage) UserRepository() *UserRepository {
 	return &UserRepository{Db: s.pool}
 }
+
+// PactRepository returns new repository for pact-related database operations.
+func (s *Storage) PactRepository() *PactRepository {
+	return &PactRepository{Db: s.pool}
+}
