@@ -21,7 +21,7 @@ type Claims struct {
 // UserResolver is interface for resolving user in storage layer.
 // This interface allows for easier testing and decoupling from concrete storage implementation.
 type UserResolver interface {
-	ResolveUserByProvider(ctx context.Context, params *storage.ResolveUserParams) (*models.User, error)
+	ResolveUserByProvider(ctx context.Context, params *storage.UserParams) (*models.User, error)
 }
 
 type Authenticators map[models.Provider]ProviderAuthenticator
@@ -59,20 +59,23 @@ func NewAuthService(storage UserResolver, log *slog.Logger, tokenTTL time.Durati
 // Returns new JWT as string.
 func (a *Service) Authenticate(ctx context.Context, provider models.Provider, token string) (string, error) {
 	const op = "AuthService.Authenticate"
+	log := a.log.With(slog.String("op", op), slog.String("provider", provider.String()))
 
 	authenticator, ok := a.providers[provider]
 	if !ok {
-		// This is server configuration error, so it's appropriate to log it here.
-		a.log.Error("unsupported provider requested", slog.String("provider", provider.String()))
+		log.Error("unsupported provider requested")
 		return "", fmt.Errorf("%s: unsupported provider", op)
 	}
 
+	log.Info("validating token with provider")
 	claims, err := authenticator.Validate(ctx, token)
 	if err != nil {
+		log.Warn("token validation failed", "error", err)
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	params := &storage.ResolveUserParams{
+	log.Info("token validated successfully, resolving user", slog.String("email", claims.Email))
+	params := &storage.UserParams{
 		ProviderName: provider,
 		ProviderID:   claims.ProviderUserID,
 		Email:        claims.Email,
@@ -82,9 +85,11 @@ func (a *Service) Authenticate(ctx context.Context, provider models.Provider, to
 
 	user, err := a.userResolver.ResolveUserByProvider(ctx, params)
 	if err != nil {
+		log.Error("failed to resolve user", "error", err)
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
+	log.Info("user resolved successfully, creating jwt", slog.String("user_id", user.ID.String()))
 	return a.createJWT(user)
 }
 
@@ -101,6 +106,8 @@ func (a *Service) createJWT(user *models.User) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signedToken, err := token.SignedString([]byte(a.jwtSecret))
 	if err != nil {
+		// This is a server-side error, so we log it as an error.
+		a.log.Error("failed to sign token", "error", err)
 		return "", fmt.Errorf("failed to sign token: %w", err)
 	}
 	return signedToken, nil

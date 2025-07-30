@@ -25,7 +25,7 @@ func TestUserRepository_ResolveUserByProvider(t *testing.T) {
 		UpdatedAt: mockTime,
 	}
 
-	inputParams := &ResolveUserParams{
+	inputParams := &UserParams{
 		ProviderName: models.ProviderGoogle,
 		ProviderID:   "12345",
 		Email:        "test@example.com",

@@ -68,15 +68,11 @@ func (h *OIDCHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	jwt, err := h.service.Authenticate(r.Context(), req.Provider, req.IDToken)
 	if err != nil {
-		// Check if error is client-side validation or provider error.
 		if errors.Is(err, models.ErrProvider) || errors.Is(err, models.ErrValidation) {
-			log.Warn("authentication failed", "error", err)
 			http.Error(w, "Authentication failed: invalid token or provider error", http.StatusUnauthorized)
 			return
 		}
 
-		// For all other errors, assume it's server-side problem.
-		log.Error("internal authentication error", "error", err)
 		http.Error(w, "An internal error occurred", http.StatusInternalServerError)
 		return
 	}

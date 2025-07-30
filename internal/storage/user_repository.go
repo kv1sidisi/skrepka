@@ -15,10 +15,20 @@ type UserRepository struct {
 	Db DBConnection
 }
 
+// UserParams defines input parameters for resolving user.
+// It is used by UserRepository.
+type UserParams struct {
+	ProviderName models.Provider
+	ProviderID   string
+	Email        string
+	Name         string
+	AvatarURL    string
+}
+
 // ResolveUserByProvider finds existing user or creates new one based on provider information.
 // This function handles main logic for user sign-in and sign-up.
 // Returns pointer to user model.
-func (r *UserRepository) ResolveUserByProvider(ctx context.Context, params *ResolveUserParams) (*models.User, error) {
+func (r *UserRepository) ResolveUserByProvider(ctx context.Context, params *UserParams) (*models.User, error) {
 	// Step 1: Attempt to find user directly via auth provider.
 	query := `
         SELECT id, user_id, provider_name, provider_id
@@ -121,11 +131,11 @@ func (r *UserRepository) findUserByEmail(ctx context.Context, email string) (*mo
 
 // createUser inserts new user into database.
 // Returns pointer to new user model.
-func (r *UserRepository) createUser(ctx context.Context, params *ResolveUserParams) (*models.User, error) {
+func (r *UserRepository) createUser(ctx context.Context, params *UserParams) (*models.User, error) {
 	query := `
         INSERT INTO users (email, name, avatar_url)
         VALUES ($1, $2, $3)
-        RETURNING id, created_at, updated_at`
+        RETURNING *`
 	var newUser models.User
 	err := r.Db.QueryRow(ctx, query, params.Email, params.Name, params.AvatarURL).Scan(
 		&newUser.ID,
@@ -143,7 +153,7 @@ func (r *UserRepository) createUser(ctx context.Context, params *ResolveUserPara
 
 // createAuthProvider inserts new auth_provider record, linking user to provider ID.
 // Returns nil on success.
-func (r *UserRepository) createAuthProvider(ctx context.Context, userID uuid.UUID, params *ResolveUserParams) error {
+func (r *UserRepository) createAuthProvider(ctx context.Context, userID uuid.UUID, params *UserParams) error {
 	query := `
         INSERT INTO auth_providers (user_id, provider_name, provider_id)
         VALUES ($1, $2, $3)`

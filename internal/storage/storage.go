@@ -8,7 +8,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kv1sidisi/skrepka/internal/config"
-	"github.com/kv1sidisi/skrepka/internal/models"
 	"log/slog"
 )
 
@@ -58,12 +57,7 @@ func (s *Storage) UserRepository() *UserRepository {
 	return &UserRepository{Db: s.pool}
 }
 
-// ResolveUserParams defines input parameters for resolving user.
-// It is used by UserRepository.
-type ResolveUserParams struct {
-	ProviderName models.Provider
-	ProviderID   string
-	Email        string
-	Name         string
-	AvatarURL    string
+// PactRepository returns new repository for pact-related database operations.
+func (s *Storage) PactRepository() *PactRepository {
+	return &PactRepository{Db: s.pool}
 }

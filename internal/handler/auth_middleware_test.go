@@ -36,11 +36,13 @@ func generateJwtToken(userID string, secret string, expiration time.Duration) (s
 	return token.SignedString([]byte(secret))
 }
 
-func TestJwtMiddleware(t *testing.T) {
+func TestJwtAuthMiddleware(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	mockHandler := &MockHandler{}
 
-	middleware := NewJwtMiddleware(log, mockHandler, testSecret)
+	jwtAuth := JwtAuthMiddleware(log, testSecret)
+
+	protectedHandler := jwtAuth(mockHandler)
 
 	testUserID := "user-123"
 
@@ -125,7 +127,7 @@ func TestJwtMiddleware(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			middleware.ServeHTTP(rr, req)
+			protectedHandler.ServeHTTP(rr, req)
 
 			if rr.Code != tc.expectedStatus {
 				t.Errorf("expected status %d, got %d", tc.expectedStatus, rr.Code)

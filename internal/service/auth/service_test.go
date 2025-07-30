@@ -19,7 +19,7 @@ type mockUserResolver struct {
 	err  error
 }
 
-func (m *mockUserResolver) ResolveUserByProvider(ctx context.Context, params *storage.ResolveUserParams) (*models.User, error) {
+func (m *mockUserResolver) ResolveUserByProvider(ctx context.Context, params *storage.UserParams) (*models.User, error) {
 	return m.user, m.err
 }
 

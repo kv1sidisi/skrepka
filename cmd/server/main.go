@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/kv1sidisi/skrepka/internal/service/pact"
 	"log"
 	"log/slog"
 	"net/http"
@@ -65,6 +66,7 @@ func main() {
 	defer db.Close()
 
 	userRepo := db.UserRepository()
+	pactRepo := db.PactRepository()
 
 	// Setup authentication providers.
 	// We create provider instances here and register them.
@@ -80,15 +82,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	//Pact CRUD service
+	pactService := pact.NewService(log, pactRepo)
+
 	// Handlers setup
 	healthHandler := handler.NewHealthHandler(log)
 	oidcAuthHandler := handler.NewOIDCHandler(log, authService)
+	pactHandler := handler.NewPactHandler(log, pactService)
+
+	jwtAuth := handler.JwtAuthMiddleware(log, cfg.JWTSecret)
 
 	// HTTP Server setup
 	mux := http.NewServeMux()
 	mux.Handle("/health", healthHandler)
 	mux.Handle("/metrics", promhttp.Handler())
 	mux.Handle("/api/v1/auth/oidc", oidcAuthHandler)
+	mux.Handle("/api/v1/pacts/", jwtAuth(pactHandler))
 
 	log.Info("starting server", "address", cfg.Address)
 
